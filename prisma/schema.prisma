@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  KITCHEN
+  NURSE
+  SES
+  EDU
+  ADMIN
+}
+
+enum RiskLevel {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  CLOSED
+}
+
+enum LogType {
+  PHOTO
+  FRIDGE_TEMP
+  HOT_TEMP
+}
+
+enum Symptom {
+  NAUSEA
+  VOMITING
+  DIARRHEA
+  FEVER
+  ABDOMINAL_PAIN
+  OTHER
+}
+
+enum InspectionType {
+  MONITORING
+  UNANNOUNCED
+  UNSCHEDULED
+}
+
+enum PrescriptionStatus {
+  OPEN
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+model District {
+  id      String   @id @default(cuid())
+  name    String
+  schools School[]
+}
+
+model School {
+  id               String    @id @default(cuid())
+  name             String
+  address          String
+  lat              Float
+  lng              Float
+  studentsCount    Int
+  districtId       String
+  district         District  @relation(fields: [districtId], references: [id])
+  riskScore        Int       @default(0)
+  riskLevel        RiskLevel @default(GREEN)
+  lastInspectionAt DateTime?
+  parentToken      String    @unique @default(cuid())
+  isDemo           Boolean   @default(false)
+
+  users          User[]
+  menuItems      MenuItem[]
+  kitchenLogs    KitchenLog[]
+  symptomReports SymptomReport[]
+  feedback       ParentFeedback[]
+  deliveries     Delivery[]
+  riskSnapshots  RiskSnapshot[]
+  alerts         Alert[]
+  inspections    Inspection[]
+  prescriptions  Prescription[]
+}
+
+model User {
+  id           String  @id @default(cuid())
+  login        String  @unique
+  passwordHash String
+  name         String
+  role         Role
+  schoolId     String?
+  school       School? @relation(fields: [schoolId], references: [id])
+}
+
+model Supplier {
+  id                    String   @id @default(cuid())
+  name                  String
+  bin                   String
+  certificateValidUntil DateTime
+  blocked               Boolean  @default(false)
+  batches               Batch[]
+}
+
+model Batch {
+  id         String     @id @default(cuid())
+  code       String     @unique
+  product    String
+  producedAt DateTime
+  expiresAt  DateTime
+  supplierId String
+  supplier   Supplier   @relation(fields: [supplierId], references: [id])
+  deliveries Delivery[]
+  menuItems  MenuItem[]
+}
+
+model Delivery {
+  id          String   @id @default(cuid())
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  deliveredAt DateTime
+}
+
+model MenuItem {
+  id               String   @id @default(cuid())
+  schoolId         String
+  school           School   @relation(fields: [schoolId], references: [id])
+  date             DateTime @db.Date
+  name             String
+  standardPortionG Int?
+  batchId          String?
+  batch            Batch?   @relation(fields: [batchId], references: [id])
+  blocked          Boolean  @default(false)
+
+  logs KitchenLog[]
+}
+
+model KitchenLog {
+  id          String    @id @default(cuid())
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id])
+  menuItemId  String?
+  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id])
+  type        LogType
+  valueC      Float?
+  photoUrl    String?
+  isViolation Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  createdById String
+}
+
+model SymptomReport {
+  id          String    @id @default(cuid())
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id])
+  grade       String
+  symptoms    Symptom[]
+  reportedAt  DateTime  @default(now())
+  createdById String
+}
+
+model ParentFeedback {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model RiskSnapshot {
+  id         String    @id @default(cuid())
+  schoolId   String
+  school     School    @relation(fields: [schoolId], references: [id])
+  score      Int
+  level      RiskLevel
+  components Json
+  computedAt DateTime  @default(now())
+}
+
+model Alert {
+  id             String      @id @default(cuid())
+  schoolId       String
+  school         School      @relation(fields: [schoolId], references: [id])
+  level          RiskLevel
+  reason         String
+  details        Json
+  relatedBatchId String?
+  status         AlertStatus @default(OPEN)
+  createdAt      DateTime    @default(now())
+  acknowledgedAt DateTime?
+  closedAt       DateTime?
+  closingNote    String?
+
+  prescriptions Prescription[]
+}
+
+model Inspection {
+  id          String         @id @default(cuid())
+  schoolId    String
+  school      School         @relation(fields: [schoolId], references: [id])
+  inspectorId String
+  type        InspectionType
+  plannedAt   DateTime
+  doneAt      DateTime?
+  result      String?
+}
+
+model Prescription {
+  id               String             @id @default(cuid())
+  schoolId         String
+  school           School             @relation(fields: [schoolId], references: [id])
+  alertId          String?
+  alert            Alert?             @relation(fields: [alertId], references: [id])
+  text             String
+  dueAt            DateTime
+  status           PrescriptionStatus @default(OPEN)
+  evidencePhotoUrl String?
+  submittedAt      DateTime?
+  decidedAt        DateTime?
+}
