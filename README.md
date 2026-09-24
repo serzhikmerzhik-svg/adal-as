@@ -70,7 +70,7 @@ flowchart LR
 
 ## 6. Технологиялар
 
-Next.js 16 (App Router, TypeScript, Tailwind) · Prisma 6.19.3 + PostgreSQL (Neon/Supabase) · JWT (jose) + bcryptjs · Leaflet/react-leaflet · Recharts · SWR (5 сек polling) · qrcode · @vercel/blob (фото сақтау, орнатылмаса клиентте сығылған data URL қолданылады) · Vercel + Vercel Cron.
+Next.js 16 (App Router, TypeScript, Tailwind) · Prisma 6.19.3 + PostgreSQL (Neon/Supabase) · JWT (jose) + bcryptjs · Leaflet/react-leaflet + 2GIS Raster Tiles API (`NEXT_PUBLIC_2GIS_KEY` бос болса, OpenStreetMap) · Recharts · SWR (5 сек polling) · qrcode · @vercel/blob (фото сақтау, орнатылмаса клиентте сығылған data URL қолданылады) · Vercel + Vercel Cron.
 
 ## 7. Орнату
 
