@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { getDemoSchool, todayRange } from "@/lib/demo";
+import { getDemoSchool } from "@/lib/demo";
+import { todayDate, todayRange } from "@/lib/date";
 import { recomputeSchoolRisk } from "@/lib/risk/score";
 
 // Демо-мектеп пен байланысты партияларды бастапқы күйге қайтарады: бүгінгі алерттер,
@@ -26,7 +27,7 @@ export async function POST() {
   await prisma.alert.deleteMany({ where: { id: { in: [...redAlertIds, ...tracedIds] } } });
   await prisma.symptomReport.deleteMany({ where: { schoolId: school.id, reportedAt: { gte: start, lte: end } } });
 
-  const todaysMenuItems = await prisma.menuItem.findMany({ where: { schoolId: school.id, date: { gte: start, lte: end } } });
+  const todaysMenuItems = await prisma.menuItem.findMany({ where: { schoolId: school.id, date: todayDate() } });
   const menuItemIds = todaysMenuItems.map((m) => m.id);
   await prisma.kitchenLog.deleteMany({ where: { schoolId: school.id, menuItemId: { in: menuItemIds } } });
   await prisma.menuItem.deleteMany({ where: { id: { in: menuItemIds } } });

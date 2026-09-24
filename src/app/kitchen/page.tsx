@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
 import { compressImageToDataUrl } from "@/lib/image";
+import { PRESCRIPTION_STATUS_LABEL } from "@/lib/risk/labels";
 
 type KitchenLog = {
   id: string;
@@ -41,28 +43,21 @@ async function uploadPhoto(dataUrl: string) {
   return data.url as string;
 }
 
+type TodayResponse = { menuItems?: MenuItem[]; prescriptions?: Prescription[]; suppliers?: Supplier[] };
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 export default function KitchenPage() {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
+  // СЭС бұғаттаған тағамдар мен жаңа нұсқамалар асханаға да көрінуі үшін мезгіл-мезгіл жаңарады.
+  const { data, mutate: load } = useSWR<TodayResponse>("/api/kitchen/today", fetcher, { refreshInterval: 15000 });
+  const menuItems = data?.menuItems ?? [];
+  const prescriptions = data?.prescriptions ?? [];
+  const suppliers = data?.suppliers ?? [];
+  const loading = !data;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tempInputs, setTempInputs] = useState<Record<string, string>>({});
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [showMenuForm, setShowMenuForm] = useState(false);
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/kitchen/today");
-    const data = await res.json();
-    setMenuItems(data.menuItems ?? []);
-    setPrescriptions(data.prescriptions ?? []);
-    setSuppliers(data.suppliers ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   async function handlePhoto(menuItemId: string, file: File) {
     setBusyId(menuItemId);
@@ -159,7 +154,7 @@ export default function KitchenPage() {
               <div key={p.id} className="bg-white rounded-xl p-3 space-y-2">
                 <p className="text-sm text-slate-800">{p.text}</p>
                 <p className="text-xs text-slate-500">
-                  Мерзімі: {new Date(p.dueAt).toLocaleDateString("kk-KZ")} · Статус: {p.status}
+                  Мерзімі: {new Date(p.dueAt).toLocaleDateString("kk-KZ")} · Статус: {PRESCRIPTION_STATUS_LABEL[p.status] ?? p.status}
                 </p>
                 {p.status === "OPEN" && (
                   <label className="inline-block w-full text-center bg-amber-600 text-white font-semibold rounded-lg py-2 active:opacity-80">

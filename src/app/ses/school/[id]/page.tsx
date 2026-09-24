@@ -5,7 +5,14 @@ import useSWR from "swr";
 import QRCode from "qrcode";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { AppHeader } from "@/components/AppHeader";
-import { RISK_COMPONENT_LABELS, LEVEL_LABEL, LEVEL_BADGE } from "@/lib/risk/labels";
+import {
+  RISK_COMPONENT_LABELS,
+  LEVEL_LABEL,
+  LEVEL_BADGE,
+  PRESCRIPTION_STATUS_LABEL,
+  INSPECTION_TYPE_LABEL,
+  symptomsText,
+} from "@/lib/risk/labels";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -166,7 +173,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
             <div key={p.id} className="border-b border-slate-100 last:border-0 py-2 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-slate-800">{p.text}</p>
-                <p className="text-xs text-slate-500">Мерзімі: {new Date(p.dueAt).toLocaleDateString("kk-KZ")} · {p.status}</p>
+                <p className="text-xs text-slate-500">Мерзімі: {new Date(p.dueAt).toLocaleDateString("kk-KZ")} · {PRESCRIPTION_STATUS_LABEL[p.status] ?? p.status}</p>
               </div>
               {p.status === "SUBMITTED" && (
                 <div className="flex gap-2 shrink-0">
@@ -196,7 +203,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg p-4 space-y-1">
             <h2 className="font-bold text-ink mb-2">Белгілер тіркеулері</h2>
             {symptomReports.map((r: { id: string; grade: string; symptoms: string[]; reportedAt: string }) => (
-              <p key={r.id} className="text-xs text-slate-600">{r.grade} · {r.symptoms.join(", ")} · {new Date(r.reportedAt).toLocaleString("kk-KZ")}</p>
+              <p key={r.id} className="text-xs text-slate-600">{r.grade} · {symptomsText(r.symptoms)} · {new Date(r.reportedAt).toLocaleString("kk-KZ")}</p>
             ))}
           </div>
           <div className="bg-white rounded-lg p-4 space-y-1">
@@ -210,7 +217,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
         <section className="bg-white rounded-lg p-4 space-y-1">
           <h2 className="font-bold text-ink mb-2">Тексерулер тарихы</h2>
           {inspections.map((i: { id: string; type: string; plannedAt: string; result: string | null }) => (
-            <p key={i.id} className="text-xs text-slate-600">{i.type} · {new Date(i.plannedAt).toLocaleDateString("kk-KZ")} · {i.result ?? "нәтиже жоқ"}</p>
+            <p key={i.id} className="text-xs text-slate-600">{INSPECTION_TYPE_LABEL[i.type] ?? i.type} · {new Date(i.plannedAt).toLocaleDateString("kk-KZ")} · {i.result ?? "нәтиже жоқ"}</p>
           ))}
         </section>
       </div>

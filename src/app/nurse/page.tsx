@@ -1,16 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
-
-const SYMPTOM_LABELS: Record<string, string> = {
-  NAUSEA: "Жүрек айну",
-  VOMITING: "Құсу",
-  DIARRHEA: "Диарея",
-  FEVER: "Дене қызуы",
-  ABDOMINAL_PAIN: "Іш ауыру",
-  OTHER: "Басқа",
-};
+import { SYMPTOM_LABELS } from "@/lib/risk/labels";
 
 type Report = {
   id: string;
@@ -19,22 +12,15 @@ type Report = {
   reportedAt: string;
 };
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 export default function NursePage() {
-  const [reports, setReports] = useState<Report[]>([]);
+  const { data, mutate: load } = useSWR<{ reports?: Report[] }>("/api/nurse/reports", fetcher);
+  const reports = data?.reports ?? [];
   const [grade, setGrade] = useState("");
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/nurse/reports");
-    const data = await res.json();
-    setReports(data.reports ?? []);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   function toggleSymptom(s: string) {
     setSymptoms((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));

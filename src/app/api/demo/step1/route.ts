@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { getDemoSchool, getSharedBatch, todayRange } from "@/lib/demo";
+import { getDemoSchool, getSharedBatch } from "@/lib/demo";
+import { todayDate } from "@/lib/date";
 import { recomputeSchoolRisk } from "@/lib/risk/score";
 
 // 1-қадам: демо-мектепке бүгінгі мәзір мен қалыпты температуралар жазылады.
 export async function POST() {
   const school = await getDemoSchool();
   const batch = await getSharedBatch(school.id);
-  const { start, end } = todayRange();
 
-  const existing = await prisma.menuItem.findMany({ where: { schoolId: school.id, date: { gte: start, lte: end } } });
+  const existing = await prisma.menuItem.findMany({ where: { schoolId: school.id, date: todayDate() } });
   if (existing.length > 0) {
     return NextResponse.json({ error: "Бүгінгі мәзір бұрыннан бар. Алдымен демоны қалпына келтіріңіз." }, { status: 400 });
   }
@@ -22,7 +22,7 @@ export async function POST() {
   const created = [];
   for (const item of items) {
     const menuItem = await prisma.menuItem.create({
-      data: { schoolId: school.id, date: new Date(), name: item.name, standardPortionG: item.portion, batchId: batch?.id },
+      data: { schoolId: school.id, date: todayDate(), name: item.name, standardPortionG: item.portion, batchId: batch?.id },
     });
     await prisma.kitchenLog.create({
       data: { schoolId: school.id, menuItemId: menuItem.id, type: "PHOTO", photoUrl: "https://placehold.co/400x300?text=Demo", createdById: "demo" },

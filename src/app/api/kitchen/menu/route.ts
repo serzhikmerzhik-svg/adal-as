@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth/session";
+import { todayDate } from "@/lib/date";
 
 const bodySchema = z.object({
   name: z.string().min(1),
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   const menuItem = await prisma.menuItem.create({
     data: {
       schoolId: session.schoolId,
-      date: new Date(),
+      date: todayDate(),
       name: parsed.data.name,
       standardPortionG: parsed.data.standardPortionG,
       batchId: parsed.data.batchId,

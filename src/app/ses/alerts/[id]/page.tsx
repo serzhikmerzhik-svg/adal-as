@@ -4,6 +4,7 @@ import { use as usePromise } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { ALERT_STATUS_LABEL, symptomsText } from "@/lib/risk/labels";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -44,7 +45,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
           </Link>
           <p className="text-sm text-slate-700 mt-1">{alert.reason}</p>
           <p className="text-xs text-slate-500 mt-1">
-            {new Date(alert.createdAt).toLocaleString("kk-KZ")} · Статус: {alert.status}
+            {new Date(alert.createdAt).toLocaleString("kk-KZ")} · Статус: {ALERT_STATUS_LABEL[alert.status] ?? alert.status}
           </p>
 
           {alert.status !== "CLOSED" && (
@@ -66,7 +67,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
             <h2 className="font-bold text-ink mb-2">Белгі тіркеулері (соңғы 24 сағат)</h2>
             {symptomReports.map((r: { id: string; grade: string; symptoms: string[]; reportedAt: string }) => (
               <p key={r.id} className="text-sm text-slate-700">
-                {r.grade} сынып · {r.symptoms.join(", ")} · {new Date(r.reportedAt).toLocaleTimeString("kk-KZ")}
+                {r.grade} сынып · {symptomsText(r.symptoms)} · {new Date(r.reportedAt).toLocaleTimeString("kk-KZ")}
               </p>
             ))}
           </section>

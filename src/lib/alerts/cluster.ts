@@ -3,6 +3,7 @@ import { CLUSTER } from "@/lib/risk/config";
 import { findSchoolsForBatches } from "@/lib/trace/batchTrace";
 import { recomputeSchoolRisk } from "@/lib/risk/score";
 import type { Symptom } from "@prisma/client";
+import { todayDate } from "@/lib/date";
 
 function minutesAgo(n: number) {
   const d = new Date();
@@ -36,13 +37,8 @@ export async function checkClusterAndAlert(schoolId: string) {
   });
   if (existingOpenRed) return null;
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-
   const todaysMenu = await prisma.menuItem.findMany({
-    where: { schoolId, date: { gte: todayStart, lte: todayEnd } },
+    where: { schoolId, date: todayDate() },
     include: { batch: { include: { supplier: true } } },
   });
 

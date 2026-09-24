@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
+import { ALERT_STATUS_LABEL } from "@/lib/risk/labels";
 
 const SchoolMap = dynamic(() => import("@/components/SchoolMap").then((m) => m.SchoolMap), { ssr: false });
 
@@ -88,7 +89,7 @@ export default function SesPage() {
                 <p className="text-sm font-semibold text-ink">{a.school.name}</p>
                 <p className="text-xs text-slate-600">{a.reason}</p>
                 <p className="text-xs text-slate-400 mt-1">
-                  {new Date(a.createdAt).toLocaleString("kk-KZ")} · {a.status}
+                  {new Date(a.createdAt).toLocaleString("kk-KZ")} · {ALERT_STATUS_LABEL[a.status] ?? a.status}
                 </p>
               </Link>
             ))}

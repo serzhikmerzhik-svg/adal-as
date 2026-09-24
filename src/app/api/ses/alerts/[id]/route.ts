@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth/session";
 import { findSchoolsForBatches } from "@/lib/trace/batchTrace";
+import { todayDate } from "@/lib/date";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,13 +22,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     orderBy: { reportedAt: "desc" },
   });
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-
   const todaysMenu = await prisma.menuItem.findMany({
-    where: { schoolId: alert.schoolId, date: { gte: todayStart, lte: todayEnd } },
+    where: { schoolId: alert.schoolId, date: todayDate() },
     include: { batch: { include: { supplier: true } } },
   });
 
