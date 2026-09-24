@@ -82,7 +82,8 @@ export function DgisMap({ schools, basePath, apiKey }: SchoolMapProps & { apiKey
     <div className="relative h-full w-full rounded-lg overflow-hidden isolate">
       <div ref={containerRef} className="absolute inset-0" />
 
-      <div className="absolute top-3 right-3 z-10 flex shadow-sm">
+      {/* Оң жақ жоғарғы бұрышта 2GIS-тің өз масштаб батырмалары тұр */}
+      <div className="absolute top-3 left-3 z-10 flex shadow-sm">
         <button type="button" className={ZOOM_BUTTON_CLASS} onClick={() => flyTo(AKTAU_VIEW)}>
           Ақтау
         </button>
