@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/AppHeader";
 
 export default function DemoPage() {
   const [log, setLog] = useState<string[]>([]);
@@ -24,11 +24,8 @@ export default function DemoPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-10">
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Демо басқару</h1>
-        <LogoutButton />
-      </header>
+    <main className="min-h-screen pb-10">
+      <AppHeader subtitle="Демо басқару" />
 
       <div className="p-4 max-w-xl mx-auto space-y-4">
         <p className="text-sm text-slate-600">
@@ -39,7 +36,7 @@ export default function DemoPage() {
         <button
           onClick={() => run("step1", "1-қадам: асхана журналы")}
           disabled={busy !== null}
-          className="w-full bg-emerald-600 text-white font-semibold rounded-xl py-3.5 disabled:opacity-60"
+          className="w-full bg-brand-600 text-white font-semibold rounded-xl py-3.5 disabled:opacity-60"
         >
           1-қадам: Асхана журналын толтыру
         </button>
@@ -60,11 +57,11 @@ export default function DemoPage() {
           Демоны қалпына келтіру
         </button>
 
-        <Link href="/ses" className="block text-center text-emerald-700 underline text-sm">
+        <Link href="/ses" className="block text-center text-brand-700 underline text-sm">
           СЭС дашбордын ашу →
         </Link>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1 text-xs font-mono max-h-64 overflow-y-auto">
+        <div className="bg-white rounded-lg p-4 space-y-1 text-xs font-mono max-h-64 overflow-y-auto">
           {log.length === 0 && <p className="text-slate-400">Журнал бос.</p>}
           {log.map((l, i) => (
             <p key={i} className="text-slate-700 break-all">{l}</p>

@@ -1,4 +1,4 @@
-# Қауіпсіз Ас
+# Адал Ас
 
 Мектеп асханасы мен облыстық СЭС арасындағы **ерте ескерту жүйесі**: асхана күн сайын фото/температура/партия деректерін енгізеді, медбике белгілерді аты-жөнсіз тіркейді, жүйе әр мектепке тәуекел балын есептеп, кластер анықталғанда СЭС инспекторына нақты уақытта дабыл береді.
 
@@ -76,13 +76,13 @@ Next.js 16 (App Router, TypeScript, Tailwind) · Prisma 6.19.3 + PostgreSQL (Neo
 
 ```bash
 npm install
-cp .env.example .env.local   # DATABASE_URL, JWT_SECRET, CRON_SECRET толтырыңыз
-npx prisma migrate dev --name init
+cp .env.example .env   # DATABASE_URL, DIRECT_URL, JWT_SECRET, CRON_SECRET толтырыңыз
+npx prisma migrate deploy
 npm run db:seed
 npm run dev
 ```
 
-`.env.local` мысалы `.env.example` файлында. Деплой: Vercel-ге қосылып, сол айнымалыларды Vercel жоба баптауларында да орнатыңыз, `vercel.json` cron-ды автоматты қосады.
+Supabase үшін: `DATABASE_URL` — transaction pooler (6543 порт, `?pgbouncer=true`), `DIRECT_URL` — session pooler (5432 порт, миграциялар үшін). Екеуі де Supabase-тегі **Connect → ORMs → Prisma** терезесінде бар. Prisma CLI тек `.env` файлын оқиды. Деплой: Vercel-ге қосылып, сол айнымалыларды Vercel жоба баптауларында да орнатыңыз, `vercel.json` cron-ды автоматты қосады.
 
 ## 8. Демо логиндер (құпиясөз барлығына: `demo123`, өндірісте міндетті түрде ауыстырыңыз)
 

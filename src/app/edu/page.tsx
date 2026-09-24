@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import useSWR from "swr";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/AppHeader";
 import { LEVEL_LABEL, LEVEL_BADGE } from "@/lib/risk/labels";
 
 const SchoolMap = dynamic(() => import("@/components/SchoolMap").then((m) => m.SchoolMap), { ssr: false });
@@ -45,35 +45,32 @@ export default function EduPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-10">
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Білім басқармасы — шолу</h1>
-        <LogoutButton />
-      </header>
+    <main className="min-h-screen pb-10">
+      <AppHeader subtitle="Білім басқармасы — шолу" />
 
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard label="Жасыл" value={kpi.green} color="bg-emerald-50 text-emerald-700" />
-          <KpiCard label="Сары" value={kpi.yellow} color="bg-amber-50 text-amber-700" />
-          <KpiCard label="Қызыл" value={kpi.red} color="bg-red-50 text-red-700" />
-          <KpiCard label="Ашық алерттер" value={kpi.openAlerts} color="bg-slate-100 text-slate-700" />
-          <KpiCard label="Мерзімі өткен нұсқама" value={kpi.overduePrescriptions} color="bg-orange-50 text-orange-700" />
+          <KpiCard label="Жасыл" value={kpi.green} color="border-brand-600 text-brand-700" />
+          <KpiCard label="Сары" value={kpi.yellow} color="border-amber-500 text-amber-700" />
+          <KpiCard label="Қызыл" value={kpi.red} color="border-red-600 text-red-700" />
+          <KpiCard label="Ашық алерттер" value={kpi.openAlerts} color="border-sky-accent text-sky-accent-dark" />
+          <KpiCard label="Мерзімі өткен нұсқама" value={kpi.overduePrescriptions} color="border-orange-500 text-orange-700" />
         </section>
 
         <section className="grid lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-3 h-[420px]">
-            <SchoolMap schools={schools} basePath="/ses/school" />
+          <div className="lg:col-span-2 bg-white rounded-lg p-3 h-[420px]">
+            <SchoolMap schools={schools} />
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 max-h-[420px] overflow-y-auto">
-            <h2 className="font-bold text-slate-900">Алерттер лентасы</h2>
+          <div className="bg-white rounded-lg p-4 space-y-3 max-h-[420px] overflow-y-auto">
+            <h2 className="font-bold text-ink">Алерттер лентасы</h2>
             {alerts.length === 0 && <p className="text-sm text-slate-500">Алерттер жоқ.</p>}
             {alerts.map((a: Alert) => (
               <div
                 key={a.id}
-                className={`rounded-xl p-3 border ${a.level === "RED" ? "border-red-300 bg-red-50" : "border-amber-300 bg-amber-50"}`}
+                className={`anim-slide-in rounded-md p-3 border-l-4 ${a.level === "RED" ? "border-red-600 bg-red-50" : "border-amber-500 bg-amber-50"}`}
               >
-                <p className="text-sm font-semibold text-slate-900">{a.school.name}</p>
+                <p className="text-sm font-semibold text-ink">{a.school.name}</p>
                 <p className="text-xs text-slate-600">{a.reason}</p>
                 <p className="text-xs text-slate-400 mt-1">
                   {new Date(a.createdAt).toLocaleString("kk-KZ")} · {a.status}
@@ -83,8 +80,8 @@ export default function EduPage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-4">
-          <h2 className="font-bold text-slate-900 mb-3">Аудандар бойынша статистика</h2>
+        <section className="bg-white rounded-lg p-4">
+          <h2 className="font-bold text-ink mb-3">Аудандар бойынша статистика</h2>
           <div className="divide-y divide-slate-100">
             {Array.from(byDistrict.values()).map((d) => (
               <div key={d.name} className="flex items-center justify-between py-2">
@@ -105,9 +102,9 @@ export default function EduPage() {
 
 function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className={`rounded-2xl p-4 ${color}`}>
+    <div className={`anim-fade-up bg-white rounded-lg p-4 border-l-4 ${color}`}>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium">{label}</p>
+      <p className="text-xs font-medium text-slate-500">{label}</p>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import Link from "next/link";
 
 type School = {
@@ -14,32 +14,64 @@ type School = {
 };
 
 const COLORS: Record<School["riskLevel"], string> = {
-  GREEN: "#16a34a",
-  YELLOW: "#ca8a04",
+  GREEN: "#1d9d74",
+  YELLOW: "#d99a06",
   RED: "#dc2626",
 };
 
-export function SchoolMap({ schools, basePath }: { schools: School[]; basePath: string }) {
+const REGION_VIEW = { center: [44.0, 52.5] as [number, number], zoom: 7 };
+const AKTAU_VIEW = { center: [43.66, 51.19] as [number, number], zoom: 12 };
+
+function ZoomButtons() {
+  const map = useMap();
+  const btn = "bg-white px-3 py-1.5 text-sm text-ink border border-slate-300 hover:bg-slate-50";
   return (
-    <MapContainer center={[44.0, 52.5]} zoom={7} className="h-full w-full rounded-2xl">
+    <div className="absolute top-3 right-3 z-[1000] flex shadow-sm">
+      <button type="button" className={btn} onClick={() => map.flyTo(AKTAU_VIEW.center, AKTAU_VIEW.zoom, { duration: 1.2 })}>
+        Ақтау
+      </button>
+      <button type="button" className={`${btn} border-l-0`} onClick={() => map.flyTo(REGION_VIEW.center, REGION_VIEW.zoom, { duration: 1.2 })}>
+        Облыс
+      </button>
+    </div>
+  );
+}
+
+export function SchoolMap({ schools, basePath }: { schools: School[]; basePath?: string }) {
+  return (
+    <MapContainer center={REGION_VIEW.center} zoom={REGION_VIEW.zoom} className="h-full w-full rounded-lg isolate">
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <ZoomButtons />
+      {schools
+        .filter((s) => s.riskLevel === "RED")
+        .map((s) => (
+          <CircleMarker
+            key={`pulse-${s.id}`}
+            center={[s.lat, s.lng]}
+            radius={9}
+            interactive={false}
+            pathOptions={{ color: COLORS.RED, fill: false, className: "marker-red-pulse" }}
+          />
+        ))}
       {schools.map((s) => (
         <CircleMarker
           key={s.id}
           center={[s.lat, s.lng]}
-          radius={9}
-          pathOptions={{ color: COLORS[s.riskLevel], fillColor: COLORS[s.riskLevel], fillOpacity: 0.8 }}
+          radius={s.riskLevel === "GREEN" ? 7 : 9}
+          pathOptions={{ color: "#ffffff", weight: 2, fillColor: COLORS[s.riskLevel], fillOpacity: 0.95 }}
         >
           <Popup>
             <div className="space-y-1">
               <p className="font-semibold">{s.name}</p>
               <p className="text-sm">Тәуекел балы: {s.riskScore}</p>
-              <Link href={`${basePath}/${s.id}`} className="text-emerald-700 underline text-sm">
-                Толық ақпарат
-              </Link>
+              {basePath && (
+                <Link href={`${basePath}/${s.id}`} className="text-brand-700 underline text-sm">
+                  Толық ақпарат
+                </Link>
+              )}
             </div>
           </Popup>
         </CircleMarker>

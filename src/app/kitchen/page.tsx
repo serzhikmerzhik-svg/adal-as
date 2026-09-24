@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/AppHeader";
 import { compressImageToDataUrl } from "@/lib/image";
 
 type KitchenLog = {
@@ -148,15 +148,12 @@ export default function KitchenPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-24">
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Асхана</h1>
-        <LogoutButton />
-      </header>
+    <main className="min-h-screen pb-24">
+      <AppHeader subtitle="Асхана" />
 
       <div className="p-4 space-y-4">
         {prescriptions.length > 0 && (
-          <section className="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-3">
+          <section className="bg-amber-50 border border-amber-300 rounded-lg p-4 space-y-3">
             <h2 className="font-bold text-amber-900">Ашық нұсқамалар</h2>
             {prescriptions.map((p) => (
               <div key={p.id} className="bg-white rounded-xl p-3 space-y-2">
@@ -187,7 +184,7 @@ export default function KitchenPage() {
         <section className="flex gap-2">
           <button
             onClick={() => setShowMenuForm((v) => !v)}
-            className="flex-1 bg-emerald-600 text-white font-semibold rounded-xl py-3 text-sm"
+            className="flex-1 bg-brand-600 text-white font-semibold rounded-xl py-3 text-sm"
           >
             + Мәзірге тағам қосу
           </button>
@@ -202,11 +199,11 @@ export default function KitchenPage() {
         {showMenuForm && (
           <form
             action={handleAddMenu}
-            className="bg-white rounded-2xl p-4 space-y-3 border border-slate-200"
+            className="bg-white rounded-lg p-4 space-y-3 border border-slate-200"
           >
             <input name="name" required placeholder="Тағам атауы" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
             <input name="portion" type="number" placeholder="Порция (г)" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
-            <button type="submit" className="w-full bg-emerald-600 text-white rounded-lg py-2 font-semibold">
+            <button type="submit" className="w-full bg-brand-600 text-white rounded-lg py-2 font-semibold">
               Қосу
             </button>
           </form>
@@ -215,7 +212,7 @@ export default function KitchenPage() {
         {showBatchForm && (
           <form
             action={handleAddBatch}
-            className="bg-white rounded-2xl p-4 space-y-3 border border-slate-200"
+            className="bg-white rounded-lg p-4 space-y-3 border border-slate-200"
           >
             <select name="supplierId" required className="w-full border border-slate-300 rounded-lg px-3 py-2">
               <option value="">Жеткізушіні таңдаңыз</option>
@@ -244,7 +241,7 @@ export default function KitchenPage() {
         )}
 
         <section className="space-y-3">
-          <h2 className="font-bold text-slate-900">Бүгінгі мәзір</h2>
+          <h2 className="font-bold text-ink">Бүгінгі мәзір</h2>
           {menuItems.length === 0 && (
             <p className="text-sm text-slate-500">Бүгін мәзір енгізілмеген. Жоғарыдан қосыңыз.</p>
           )}
@@ -255,7 +252,7 @@ export default function KitchenPage() {
             return (
               <div
                 key={item.id}
-                className={`bg-white rounded-2xl p-4 space-y-3 border ${item.blocked ? "border-red-400" : "border-slate-200"}`}
+                className={`bg-white rounded-lg p-4 space-y-3 border ${item.blocked ? "border-red-400" : "border-slate-200"}`}
               >
                 {item.blocked && (
                   <p className="text-sm font-bold text-red-600 bg-red-50 rounded-lg px-3 py-2">
@@ -264,7 +261,7 @@ export default function KitchenPage() {
                 )}
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{item.name}</p>
+                    <p className="font-semibold text-ink">{item.name}</p>
                     {item.standardPortionG && <p className="text-xs text-slate-500">Порция: {item.standardPortionG} г</p>}
                     {item.batch && (
                       <p className="text-xs text-slate-500">
@@ -278,7 +275,7 @@ export default function KitchenPage() {
                   )}
                 </div>
 
-                <label className="block w-full text-center bg-emerald-600 text-white font-semibold rounded-lg py-2.5 active:opacity-80">
+                <label className="block w-full text-center bg-brand-600 text-white font-semibold rounded-lg py-2.5 active:opacity-80">
                   {busyId === item.id ? "Жүктелуде..." : lastPhoto ? "Фотоны жаңарту" : "Порция фотосы"}
                   <input
                     type="file"

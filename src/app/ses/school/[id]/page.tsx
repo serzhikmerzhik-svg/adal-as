@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, use as usePromise } from "react";
 import useSWR from "swr";
 import QRCode from "qrcode";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/AppHeader";
 import { RISK_COMPONENT_LABELS, LEVEL_LABEL, LEVEL_BADGE } from "@/lib/risk/labels";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -67,17 +67,14 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-10">
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">{school.name}</h1>
-        <LogoutButton />
-      </header>
+    <main className="min-h-screen pb-10">
+      <AppHeader subtitle={school.name} backHref="/ses" />
 
       <div className="p-4 max-w-5xl mx-auto space-y-4">
-        <section className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center gap-4 justify-between">
+        <section className="bg-white rounded-lg p-4 flex flex-wrap items-center gap-4 justify-between">
           <div>
             <p className="text-sm text-slate-500">{school.district.name} · {school.address}</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">
+            <p className="text-3xl font-bold text-ink mt-1">
               {school.riskScore} <span className={`text-sm rounded-full px-2 py-1 ${LEVEL_BADGE[school.riskLevel]}`}>{LEVEL_LABEL[school.riskLevel]}</span>
             </p>
           </div>
@@ -91,21 +88,21 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
         </section>
 
         {latestComponents && (
-          <section className="bg-white rounded-2xl border border-slate-200 p-4">
-            <h2 className="font-bold text-slate-900 mb-3">Тәуекел балының құрамы</h2>
+          <section className="bg-white rounded-lg p-4">
+            <h2 className="font-bold text-ink mb-3">Тәуекел балының құрамы</h2>
             <div className="space-y-2">
               {Object.entries(RISK_COMPONENT_LABELS).map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between text-sm">
                   <span className="text-slate-600">{label}</span>
-                  <span className="font-semibold text-slate-900">{(latestComponents as Record<string, number>)[key] ?? 0}</span>
+                  <span className="font-semibold text-ink">{(latestComponents as Record<string, number>)[key] ?? 0}</span>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-4">
-          <h2 className="font-bold text-slate-900 mb-3">Соңғы 30 күндегі тәуекел</h2>
+        <section className="bg-white rounded-lg p-4">
+          <h2 className="font-bold text-ink mb-3">Соңғы 30 күндегі тәуекел</h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
@@ -120,8 +117,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
         </section>
 
         <section className="grid md:grid-cols-2 gap-4">
-          <form onSubmit={submitInspection} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-            <h2 className="font-bold text-slate-900">Тексеру тағайындау</h2>
+          <form onSubmit={submitInspection} className="bg-white rounded-lg p-4 space-y-3">
+            <h2 className="font-bold text-ink">Тексеру тағайындау</h2>
             <select
               value={inspectionForm.type}
               onChange={(e) => setInspectionForm((s) => ({ ...s, type: e.target.value }))}
@@ -141,8 +138,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
             <button className="w-full bg-slate-800 text-white rounded-lg py-2 font-semibold">Тағайындау</button>
           </form>
 
-          <form onSubmit={submitPrescription} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-            <h2 className="font-bold text-slate-900">Нұсқама беру</h2>
+          <form onSubmit={submitPrescription} className="bg-white rounded-lg p-4 space-y-3">
+            <h2 className="font-bold text-ink">Нұсқама беру</h2>
             <textarea
               required
               value={prescriptionForm.text}
@@ -162,8 +159,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
           </form>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-          <h2 className="font-bold text-slate-900">Нұсқамалар тарихы</h2>
+        <section className="bg-white rounded-lg p-4 space-y-2">
+          <h2 className="font-bold text-ink">Нұсқамалар тарихы</h2>
           {prescriptions.length === 0 && <p className="text-sm text-slate-500">Жоқ.</p>}
           {prescriptions.map((p: { id: string; text: string; status: string; dueAt: string; evidencePhotoUrl: string | null }) => (
             <div key={p.id} className="border-b border-slate-100 last:border-0 py-2 flex items-center justify-between gap-3">
@@ -173,7 +170,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
               </div>
               {p.status === "SUBMITTED" && (
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => decidePrescription(p.id, "accept")} className="text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5">Қабылдау</button>
+                  <button onClick={() => decidePrescription(p.id, "accept")} className="text-xs bg-brand-600 text-white rounded-lg px-3 py-1.5">Қабылдау</button>
                   <button onClick={() => decidePrescription(p.id, "reject")} className="text-xs bg-red-600 text-white rounded-lg px-3 py-1.5">Қайтару</button>
                 </div>
               )}
@@ -181,8 +178,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
           ))}
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-          <h2 className="font-bold text-slate-900">Асхана журналы</h2>
+        <section className="bg-white rounded-lg p-4 space-y-2">
+          <h2 className="font-bold text-ink">Асхана журналы</h2>
           <div className="max-h-72 overflow-y-auto space-y-1">
             {kitchenLogs.map((l: { id: string; type: string; valueC: number | null; isViolation: boolean; createdAt: string; menuItem: { name: string } | null }) => (
               <div key={l.id} className="text-xs flex justify-between border-b border-slate-100 py-1.5">
@@ -196,22 +193,22 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
         </section>
 
         <section className="grid md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
-            <h2 className="font-bold text-slate-900 mb-2">Белгілер тіркеулері</h2>
+          <div className="bg-white rounded-lg p-4 space-y-1">
+            <h2 className="font-bold text-ink mb-2">Белгілер тіркеулері</h2>
             {symptomReports.map((r: { id: string; grade: string; symptoms: string[]; reportedAt: string }) => (
               <p key={r.id} className="text-xs text-slate-600">{r.grade} · {r.symptoms.join(", ")} · {new Date(r.reportedAt).toLocaleString("kk-KZ")}</p>
             ))}
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
-            <h2 className="font-bold text-slate-900 mb-2">Ата-ана бағалары</h2>
+          <div className="bg-white rounded-lg p-4 space-y-1">
+            <h2 className="font-bold text-ink mb-2">Ата-ана бағалары</h2>
             {feedback.map((f: { id: string; rating: number; comment: string | null; createdAt: string }) => (
               <p key={f.id} className="text-xs text-slate-600">{"★".repeat(f.rating)} {f.comment ?? ""}</p>
             ))}
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
-          <h2 className="font-bold text-slate-900 mb-2">Тексерулер тарихы</h2>
+        <section className="bg-white rounded-lg p-4 space-y-1">
+          <h2 className="font-bold text-ink mb-2">Тексерулер тарихы</h2>
           {inspections.map((i: { id: string; type: string; plannedAt: string; result: string | null }) => (
             <p key={i.id} className="text-xs text-slate-600">{i.type} · {new Date(i.plannedAt).toLocaleDateString("kk-KZ")} · {i.result ?? "нәтиже жоқ"}</p>
           ))}

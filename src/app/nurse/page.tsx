@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/AppHeader";
 
 const SYMPTOM_LABELS: Record<string, string> = {
   NAUSEA: "Жүрек айну",
@@ -62,15 +62,12 @@ export default function NursePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-24">
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Медбике</h1>
-        <LogoutButton />
-      </header>
+    <main className="min-h-screen pb-24">
+      <AppHeader subtitle="Медбике" />
 
       <div className="p-4 space-y-6">
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-4 space-y-4 border border-slate-200">
-          <h2 className="font-bold text-slate-900">Белгі тіркеу</h2>
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg p-4 space-y-4 border border-slate-200">
+          <h2 className="font-bold text-ink">Белгі тіркеу</h2>
 
           <div>
             <label className="text-sm font-medium text-slate-700">Сынып</label>
@@ -103,7 +100,7 @@ export default function NursePage() {
             </div>
           </div>
 
-          {message && <p className="text-sm font-medium text-emerald-700">{message}</p>}
+          {message && <p className="text-sm font-medium text-brand-700">{message}</p>}
 
           <button
             type="submit"
@@ -115,12 +112,12 @@ export default function NursePage() {
         </form>
 
         <section className="space-y-2">
-          <h2 className="font-bold text-slate-900">Соңғы 24 сағат</h2>
+          <h2 className="font-bold text-ink">Соңғы 24 сағат</h2>
           {reports.length === 0 && <p className="text-sm text-slate-500">Тіркеулер жоқ.</p>}
           {reports.map((r) => (
             <div key={r.id} className="bg-white rounded-xl p-3 border border-slate-200 flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900">{r.grade} сынып</p>
+                <p className="font-medium text-ink">{r.grade} сынып</p>
                 <p className="text-xs text-slate-500">{r.symptoms.map((s) => SYMPTOM_LABELS[s] ?? s).join(", ")}</p>
               </div>
               <p className="text-xs text-slate-400">

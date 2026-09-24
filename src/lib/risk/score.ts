@@ -39,19 +39,16 @@ async function missingPhotosScore(schoolId: string) {
     select: { date: true },
   });
 
-  let missing = 0;
-  for (const { date } of recentMenuDays) {
-    const nextDay = new Date(date);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const photoCount = await prisma.kitchenLog.count({
-      where: {
-        schoolId,
-        type: "PHOTO",
-        createdAt: { gte: date, lt: nextDay },
-      },
-    });
-    if (photoCount === 0) missing += 1;
-  }
+  if (recentMenuDays.length === 0) return 0;
+
+  // Бір сұраныспен барлық фотоларды алып, күн бойынша жадта салыстырамыз (MenuItem.date — UTC күні).
+  const oldest = recentMenuDays[recentMenuDays.length - 1].date;
+  const photos = await prisma.kitchenLog.findMany({
+    where: { schoolId, type: "PHOTO", createdAt: { gte: oldest } },
+    select: { createdAt: true },
+  });
+  const photoDays = new Set(photos.map((p) => p.createdAt.toISOString().slice(0, 10)));
+  const missing = recentMenuDays.filter(({ date }) => !photoDays.has(date.toISOString().slice(0, 10))).length;
   return Math.min(missing * RISK_WEIGHTS.MISSING_PHOTO_POINTS, RISK_WEIGHTS.MISSING_PHOTO_MAX);
 }
 
@@ -95,21 +92,27 @@ async function supplierRiskScore(schoolId: string) {
     include: { batch: { include: { supplier: true } } },
   });
 
-  for (const delivery of deliveries) {
-    const supplier = delivery.batch.supplier;
-    if (supplier.blocked) return RISK_WEIGHTS.SUPPLIER_RISK_MAX;
-    if (supplier.certificateValidUntil < new Date()) return RISK_WEIGHTS.SUPPLIER_RISK_MAX;
+  if (deliveries.length === 0) return 0;
 
-    const redAlertLinked = await prisma.alert.findFirst({
-      where: {
-        level: "RED",
-        createdAt: { gte: daysAgo(RISK_WEIGHTS.SUPPLIER_RISK_ALERT_DAYS) },
-        relatedBatchId: { in: (await prisma.batch.findMany({ where: { supplierId: supplier.id }, select: { id: true } })).map((b) => b.id) },
-      },
-    });
-    if (redAlertLinked) return RISK_WEIGHTS.SUPPLIER_RISK_MAX;
+  const suppliers = deliveries.map((d) => d.batch.supplier);
+  if (suppliers.some((s) => s.blocked || s.certificateValidUntil < new Date())) {
+    return RISK_WEIGHTS.SUPPLIER_RISK_MAX;
   }
-  return 0;
+
+  const supplierIds = Array.from(new Set(suppliers.map((s) => s.id)));
+  const supplierBatches = await prisma.batch.findMany({
+    where: { supplierId: { in: supplierIds } },
+    select: { id: true },
+  });
+  const redAlertLinked = await prisma.alert.findFirst({
+    where: {
+      level: "RED",
+      createdAt: { gte: daysAgo(RISK_WEIGHTS.SUPPLIER_RISK_ALERT_DAYS) },
+      relatedBatchId: { in: supplierBatches.map((b) => b.id) },
+    },
+    select: { id: true },
+  });
+  return redAlertLinked ? RISK_WEIGHTS.SUPPLIER_RISK_MAX : 0;
 }
 
 function inspectionAgeScore(lastInspectionAt: Date | null) {
@@ -127,9 +130,7 @@ async function overduePrescriptionsScore(schoolId: string) {
   return Math.min(count * RISK_WEIGHTS.OVERDUE_PRESCRIPTION_POINTS, RISK_WEIGHTS.OVERDUE_PRESCRIPTION_MAX);
 }
 
-export async function computeRiskComponents(schoolId: string): Promise<RiskComponents> {
-  const school = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });
-
+export async function computeRiskComponents(schoolId: string, lastInspectionAt: Date | null): Promise<RiskComponents> {
   const [tempViolations, missingPhotos, parentRating, complaintSpike, supplierRisk, overduePrescriptions] =
     await Promise.all([
       tempViolationsScore(schoolId),
@@ -146,7 +147,7 @@ export async function computeRiskComponents(schoolId: string): Promise<RiskCompo
     parentRating,
     complaintSpike,
     supplierRisk,
-    inspectionAge: inspectionAgeScore(school.lastInspectionAt),
+    inspectionAge: inspectionAgeScore(lastInspectionAt),
     overduePrescriptions,
   };
 }
@@ -166,18 +167,20 @@ export function levelForScore(score: number, hasOpenRedAlert: boolean): RiskLeve
 
 /** Мектептің тәуекел балын қайта есептеп, RiskSnapshot жазады және School.riskScore/riskLevel жаңартады. */
 export async function recomputeSchoolRisk(schoolId: string) {
+  // Сұраныстар параллель жүреді: ДБ алыс болғанда әр кезектегі сұраныс секундтарға созылады.
   const school = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });
-  const components = await computeRiskComponents(schoolId);
+  const [components, openRedAlert] = await Promise.all([
+    computeRiskComponents(schoolId, school.lastInspectionAt),
+    prisma.alert.findFirst({
+      where: { schoolId, level: "RED", status: { in: ["OPEN", "ACKNOWLEDGED"] } },
+      select: { id: true },
+    }),
+  ]);
   const score = totalScore(components);
-
-  const openRedAlert = await prisma.alert.findFirst({
-    where: { schoolId, level: "RED", status: { in: ["OPEN", "ACKNOWLEDGED"] } },
-  });
-
   const level = levelForScore(score, !!openRedAlert);
   const previousLevel = school.riskLevel;
 
-  await prisma.$transaction([
+  await Promise.all([
     prisma.riskSnapshot.create({
       data: { schoolId, score, level, components: components as unknown as object },
     }),

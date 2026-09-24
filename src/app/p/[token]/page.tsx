@@ -51,31 +51,31 @@ export default function ParentPage({ params }: { params: Promise<{ token: string
   if (error && !schoolName) return <div className="p-6 text-center text-red-600">{error}</div>;
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-10">
+    <main className="min-h-screen pb-10">
       <header className="bg-white border-b border-slate-200 px-4 py-4 text-center">
-        <h1 className="text-xl font-bold text-slate-900">{schoolName}</h1>
+        <h1 className="text-xl font-bold text-ink">{schoolName}</h1>
         <p className="text-sm text-slate-500">Бүгінгі мәзір</p>
       </header>
 
       <div className="p-4 max-w-lg mx-auto space-y-4">
         {menuItems.length === 0 && <p className="text-center text-sm text-slate-500">Бүгін мәзір енгізілмеген.</p>}
         {menuItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div key={item.id} className="bg-white rounded-lg overflow-hidden">
             {item.photoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.photoUrl} alt={item.name} className="w-full h-40 object-cover" />
             )}
             <div className="p-3">
-              <p className="font-semibold text-slate-900">{item.name}</p>
+              <p className="font-semibold text-ink">{item.name}</p>
               {item.standardPortionG && <p className="text-xs text-slate-500">Порция: {item.standardPortionG} г</p>}
             </div>
           </div>
         ))}
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-          <h2 className="font-bold text-slate-900">Тағамға баға беріңіз</h2>
+        <div className="bg-white rounded-lg p-4 space-y-3">
+          <h2 className="font-bold text-ink">Тағамға баға беріңіз</h2>
           {submitted ? (
-            <p className="text-emerald-700 font-medium">Рахмет! Пікіріңіз қабылданды.</p>
+            <p className="text-brand-700 font-medium">Рахмет! Пікіріңіз қабылданды.</p>
           ) : (
             <>
               <div className="flex gap-2 justify-center text-3xl">
@@ -96,7 +96,7 @@ export default function ParentPage({ params }: { params: Promise<{ token: string
               <button
                 onClick={submitFeedback}
                 disabled={rating === 0}
-                className="w-full bg-emerald-600 text-white font-semibold rounded-lg py-2.5 disabled:opacity-50"
+                className="w-full bg-brand-600 text-white font-semibold rounded-lg py-2.5 disabled:opacity-50"
               >
                 Жіберу
               </button>

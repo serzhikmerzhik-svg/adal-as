@@ -53,6 +53,7 @@ export async function checkClusterAndAlert(schoolId: string) {
       schoolId,
       level: "RED",
       reason: `${giReports.length} оқушыда ${CLUSTER.WINDOW_MIN} минут ішінде ішек-қарын белгілері тіркелді`,
+      relatedBatchId: batchIds[0] ?? null,
       details: {
         reportIds: giReports.map((r) => r.id),
         menu: todaysMenu.map((m) => ({
@@ -65,33 +66,32 @@ export async function checkClusterAndAlert(schoolId: string) {
     },
   });
 
-  if (todaysMenu.length > 0) {
-    await prisma.menuItem.updateMany({
-      where: { id: { in: todaysMenu.map((m) => m.id) } },
-      data: { blocked: true },
+  const affectedSchoolIds = [schoolId];
+  const [sourceSchool, otherSchools] = await Promise.all([
+    prisma.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true } }),
+    batchIds.length > 0 ? findSchoolsForBatches(batchIds, schoolId) : Promise.resolve([]),
+    todaysMenu.length > 0
+      ? prisma.menuItem.updateMany({ where: { id: { in: todaysMenu.map((m) => m.id) } }, data: { blocked: true } })
+      : Promise.resolve(null),
+  ]);
+
+  if (otherSchools.length > 0) {
+    const batchCodes = new Map(todaysMenu.filter((m) => m.batch).map((m) => [m.batch!.id, m.batch!.code]));
+    await prisma.alert.createMany({
+      data: otherSchools.flatMap(({ school, batchIds: matched }) =>
+        matched.map((batchId) => ({
+          schoolId: school.id,
+          level: "YELLOW" as const,
+          reason: `Партия №${batchCodes.get(batchId)}: "${sourceSchool.name}" мектебінде улану кластері анықталды`,
+          relatedBatchId: batchId,
+          details: { sourceSchoolId: schoolId, sourceAlertId: alert.id, batchCode: batchCodes.get(batchId) ?? null },
+        })),
+      ),
     });
+    affectedSchoolIds.push(...otherSchools.map((o) => o.school.id));
   }
 
-  if (batchIds.length > 0) {
-    const otherSchools = await findSchoolsForBatches(batchIds, schoolId);
-    for (const { school, batchIds: matchedBatchIds } of otherSchools) {
-      const batches = await prisma.batch.findMany({ where: { id: { in: matchedBatchIds } } });
-      for (const batch of batches) {
-        await prisma.alert.create({
-          data: {
-            schoolId: school.id,
-            level: "YELLOW",
-            reason: `Партия №${batch.code}: мектеп "${school.name}"-де улану кластері анықталды`,
-            relatedBatchId: batch.id,
-            details: { sourceSchoolId: schoolId, sourceAlertId: alert.id, batchCode: batch.code },
-          },
-        });
-      }
-      await recomputeSchoolRisk(school.id);
-    }
-  }
-
-  await recomputeSchoolRisk(schoolId);
+  await Promise.all(affectedSchoolIds.map((id) => recomputeSchoolRisk(id)));
 
   return alert;
 }

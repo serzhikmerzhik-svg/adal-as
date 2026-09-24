@@ -3,7 +3,7 @@
 import { use as usePromise } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/AppHeader";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -33,16 +33,13 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-10">
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Алерт</h1>
-        <LogoutButton />
-      </header>
+    <main className="min-h-screen pb-10">
+      <AppHeader subtitle="Алерт" backHref="/ses" />
 
       <div className="p-4 max-w-3xl mx-auto space-y-4">
-        <section className={`rounded-2xl p-4 border ${alert.level === "RED" ? "bg-red-50 border-red-300" : "bg-amber-50 border-amber-300"}`}>
+        <section className={`rounded-lg p-4 border ${alert.level === "RED" ? "bg-red-50 border-red-300" : "bg-amber-50 border-amber-300"}`}>
           <p className="text-xs uppercase font-bold text-slate-500">{alert.level === "RED" ? "Қызыл дабыл" : "Сары алерт"}</p>
-          <Link href={`/ses/school/${alert.schoolId}`} className="text-lg font-bold text-slate-900 underline">
+          <Link href={`/ses/school/${alert.schoolId}`} className="text-lg font-bold text-ink underline">
             {alert.school.name}
           </Link>
           <p className="text-sm text-slate-700 mt-1">{alert.reason}</p>
@@ -57,7 +54,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
                   Қабылдадым
                 </button>
               )}
-              <button onClick={() => act("close")} className="bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm font-semibold">
+              <button onClick={() => act("close")} className="bg-brand-700 text-white rounded-lg px-4 py-2 text-sm font-semibold">
                 Жабу
               </button>
             </div>
@@ -65,8 +62,8 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
         </section>
 
         {symptomReports.length > 0 && (
-          <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
-            <h2 className="font-bold text-slate-900 mb-2">Белгі тіркеулері (соңғы 24 сағат)</h2>
+          <section className="bg-white rounded-lg p-4 space-y-1">
+            <h2 className="font-bold text-ink mb-2">Белгі тіркеулері (соңғы 24 сағат)</h2>
             {symptomReports.map((r: { id: string; grade: string; symptoms: string[]; reportedAt: string }) => (
               <p key={r.id} className="text-sm text-slate-700">
                 {r.grade} сынып · {r.symptoms.join(", ")} · {new Date(r.reportedAt).toLocaleTimeString("kk-KZ")}
@@ -76,12 +73,12 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         {todaysMenu.length > 0 && (
-          <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-            <h2 className="font-bold text-slate-900">Бүгінгі мәзір мен партиялар</h2>
+          <section className="bg-white rounded-lg p-4 space-y-2">
+            <h2 className="font-bold text-ink">Бүгінгі мәзір мен партиялар</h2>
             {todaysMenu.map((m: { id: string; name: string; batch: { code: string; supplier: { id: string; name: string; blocked: boolean } } | null }) => (
               <div key={m.id} className="flex items-center justify-between border-b border-slate-100 py-2 last:border-0">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{m.name}</p>
+                  <p className="text-sm font-medium text-ink">{m.name}</p>
                   {m.batch && (
                     <p className="text-xs text-slate-500">
                       Партия {m.batch.code} · {m.batch.supplier.name} {m.batch.supplier.blocked && "(бұғатталған)"}
@@ -102,13 +99,13 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         {trace.length > 0 && (
-          <section className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-            <h2 className="font-bold text-slate-900">Партияны қадағалау — басқа мектептер</h2>
+          <section className="bg-white rounded-lg p-4 space-y-2">
+            <h2 className="font-bold text-ink">Партияны қадағалау — басқа мектептер</h2>
             {trace.map((t: { school: { id: string; name: string }; batchIds: string[] }) => (
               <Link
                 key={t.school.id}
                 href={`/ses/school/${t.school.id}`}
-                className="block text-sm text-emerald-700 underline"
+                className="block text-sm text-brand-700 underline"
               >
                 {t.school.name} ({t.batchIds.length} партия)
               </Link>
