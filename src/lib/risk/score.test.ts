@@ -43,3 +43,8 @@ test("levelForScore: 70+ RED", () => {
 test("levelForScore: ашық қызыл алерт болса, балл төмен болса да RED", () => {
   assert.equal(levelForScore(10, true), "RED");
 });
+
+test("levelForScore: партияны қадағалау алерті бар мектеп кемінде YELLOW", () => {
+  assert.equal(levelForScore(0, false, true), "YELLOW");
+  assert.equal(levelForScore(75, false, true), "RED");
+});

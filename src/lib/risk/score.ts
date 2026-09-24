@@ -159,9 +159,10 @@ export function totalScore(components: RiskComponents) {
   );
 }
 
-export function levelForScore(score: number, hasOpenRedAlert: boolean): RiskLevel {
+export function levelForScore(score: number, hasOpenRedAlert: boolean, hasOpenTraceAlert = false): RiskLevel {
   if (hasOpenRedAlert || score >= RISK_THRESHOLDS.RED_MIN) return "RED";
-  if (score >= RISK_THRESHOLDS.YELLOW_MIN) return "YELLOW";
+  // Басқа мектептегі кластер партиясын алған мектеп алерт жабылғанша кемінде сары болып тұрады.
+  if (hasOpenTraceAlert || score >= RISK_THRESHOLDS.YELLOW_MIN) return "YELLOW";
   return "GREEN";
 }
 
@@ -169,15 +170,23 @@ export function levelForScore(score: number, hasOpenRedAlert: boolean): RiskLeve
 export async function recomputeSchoolRisk(schoolId: string) {
   // Сұраныстар параллель жүреді: ДБ алыс болғанда әр кезектегі сұраныс секундтарға созылады.
   const school = await prisma.school.findUniqueOrThrow({ where: { id: schoolId } });
-  const [components, openRedAlert] = await Promise.all([
+  const [components, openAlerts] = await Promise.all([
     computeRiskComponents(schoolId, school.lastInspectionAt),
-    prisma.alert.findFirst({
-      where: { schoolId, level: "RED", status: { in: ["OPEN", "ACKNOWLEDGED"] } },
-      select: { id: true },
+    prisma.alert.findMany({
+      where: {
+        schoolId,
+        status: { in: ["OPEN", "ACKNOWLEDGED"] },
+        OR: [{ level: "RED" }, { level: "YELLOW", relatedBatchId: { not: null } }],
+      },
+      select: { level: true },
     }),
   ]);
   const score = totalScore(components);
-  const level = levelForScore(score, !!openRedAlert);
+  const level = levelForScore(
+    score,
+    openAlerts.some((a) => a.level === "RED"),
+    openAlerts.some((a) => a.level === "YELLOW"),
+  );
   const previousLevel = school.riskLevel;
 
   await Promise.all([
