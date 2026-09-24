@@ -1,142 +1,129 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
-import Link from "next/link";
 import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
-import { KindFilter, countByKind, type KindFilterValue } from "@/components/KindFilter";
-import type { MapSchool } from "@/components/map/shared";
-import { ALERT_STATUS_LABEL, FACILITY_KIND_LABEL, LEVEL_BADGE, LEVEL_LABEL } from "@/lib/risk/labels";
+import type { MapFocus } from "@/components/map/shared";
+import { AlertBanner } from "@/components/ses/AlertBanner";
+import { AlertsPanel } from "@/components/ses/AlertsPanel";
+import { DistrictsCard } from "@/components/ses/DistrictsCard";
+import { DynamicsCard } from "@/components/ses/DynamicsCard";
+import { InspectionTable } from "@/components/ses/InspectionTable";
+import { JournalCard } from "@/components/ses/JournalCard";
+import { KpiRow } from "@/components/ses/KpiRow";
+import { MapCard } from "@/components/ses/MapCard";
+import { SuppliersCard } from "@/components/ses/SuppliersCard";
+import { TodayInspectionsCard } from "@/components/ses/TodayInspectionsCard";
+import { fetcher, type Overview, type Stats, type SupplierRow, type Unannounced } from "@/components/ses/types";
+import { shortName } from "@/lib/format";
 
-const SchoolMap = dynamic(() => import("@/components/SchoolMap").then((m) => m.SchoolMap), { ssr: false });
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-type OverviewSchool = MapSchool & { district: { name: string } };
-
-type Alert = {
-  id: string;
-  level: "YELLOW" | "RED";
-  reason: string;
-  status: string;
-  createdAt: string;
-  school: { name: string };
-};
-
-export default function SesPage() {
-  const { data } = useSWR("/api/ses/overview", fetcher, { refreshInterval: 5000 });
+export default function SesDashboard() {
+  const overview = useSWR<Overview>("/api/ses/overview", fetcher, { refreshInterval: 5000 });
+  const stats = useSWR<Stats>("/api/ses/stats", fetcher, { refreshInterval: 30000 });
+  const suppliers = useSWR<{ suppliers: SupplierRow[] }>("/api/ses/suppliers", fetcher, { refreshInterval: 30000 });
+  const [focus, setFocus] = useState<MapFocus | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [kind, setKind] = useState<KindFilterValue>("ALL");
   const knownAlertIds = useRef<Set<string> | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
 
+  const refreshAll = () => {
+    overview.mutate();
+    stats.mutate();
+    suppliers.mutate();
+  };
+
+  // Жаңа қызыл алерт келгенде toast шығады (алғашқы жүктеуде емес).
+  const alerts = overview.data?.alerts;
   useEffect(() => {
-    if (!data?.alerts) return;
-    const ids: Alert[] = data.alerts;
+    if (!alerts) return;
     if (knownAlertIds.current === null) {
-      knownAlertIds.current = new Set(ids.map((a) => a.id));
+      knownAlertIds.current = new Set(alerts.map((a) => a.id));
       return;
     }
-    const fresh = ids.find((a) => a.level === "RED" && !knownAlertIds.current!.has(a.id));
-    if (fresh) {
-      setToast(`Жаңа қызыл дабыл: ${fresh.school.name}`);
-      setTimeout(() => setToast(null), 6000);
-    }
-    knownAlertIds.current = new Set(ids.map((a) => a.id));
-  }, [data]);
+    const fresh = alerts.find((a) => a.level === "RED" && !knownAlertIds.current!.has(a.id));
+    knownAlertIds.current = new Set(alerts.map((a) => a.id));
+    if (!fresh) return;
+    const show = setTimeout(() => setToast(`Жаңа қызыл дабыл: ${shortName(fresh.school.name, fresh.school.kind)}`), 0);
+    const hide = setTimeout(() => setToast(null), 6000);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, [alerts]);
 
-  if (!data) {
-    return <div className="p-6 text-center text-slate-500">Жүктелуде...</div>;
+  function showOnMap(row: Unannounced) {
+    setFocus({ key: Date.now(), kind: "points", points: [{ lat: row.lat, lng: row.lng }] });
+    mapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  const { schools, alerts, kpi, unannouncedList } = data as {
-    schools: OverviewSchool[];
-    alerts: Alert[];
-    kpi: Record<string, number>;
-    unannouncedList: OverviewSchool[];
-  };
-  const byKind = (list: OverviewSchool[]) => (kind === "ALL" ? list : list.filter((s) => s.kind === kind));
-  const visibleSchools = byKind(schools);
-  const visibleUnannounced = byKind(unannouncedList);
+  const data = overview.data;
 
   return (
-    <main className="min-h-screen pb-10">
+    <div className="min-h-screen pb-12">
+      <AppHeader subtitle="СЭС дашборды · Маңғыстау облысы" roleLabel="Инспектор · ДСЭК" sesNav live />
+
       {toast && (
-        <div className="anim-slide-in fixed top-20 right-4 z-[60] bg-red-600 text-white rounded-md px-4 py-3 shadow-lg max-w-xs">
+        <div className="anim-slide-in fixed top-20 right-4 z-[60] rounded-lg bg-bad-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}
 
-      <AppHeader subtitle="СЭС дашборды" />
-
-      <div className="p-4 space-y-4 max-w-7xl mx-auto">
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard label="Жасыл" value={kpi.green} color="border-brand-600 text-brand-700" />
-          <KpiCard label="Сары" value={kpi.yellow} color="border-amber-500 text-amber-700" />
-          <KpiCard label="Қызыл" value={kpi.red} color="border-red-600 text-red-700" />
-          <KpiCard label="Ашық алерттер" value={kpi.openAlerts} color="border-sky-accent text-sky-accent-dark" />
-          <KpiCard label="Мерзімі өткен нұсқама" value={kpi.overduePrescriptions} color="border-orange-500 text-orange-700" />
-        </section>
-
-        <KindFilter value={kind} onChange={setKind} counts={countByKind(schools)} />
-
-        <section className="grid lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 bg-white rounded-lg p-3 h-[420px]">
-            <SchoolMap schools={visibleSchools} basePath="/ses/school" />
+      <main className="max-w-[1440px] mx-auto px-4 lg:px-8 py-6 space-y-5">
+        {overview.error && !data && (
+          <p className="card p-5 text-sm text-bad-600">Деректерді жүктеу мүмкін болмады. Бет 5 секундтан кейін қайта көреді.</p>
+        )}
+        {!data ? (
+          <div className="grid gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="card h-[118px] animate-pulse" />
+              ))}
+            </div>
+            <div className="card h-[540px] animate-pulse" />
           </div>
+        ) : (
+          <>
+            {data.banner && <AlertBanner alert={data.banner} />}
+            <KpiRow kpi={data.kpi} />
 
-          <div className="bg-white rounded-lg p-4 space-y-3 max-h-[420px] overflow-y-auto">
-            <h2 className="font-bold text-ink">Алерттер лентасы</h2>
-            {alerts.length === 0 && <p className="text-sm text-slate-500">Алерттер жоқ.</p>}
-            {alerts.map((a: Alert) => (
-              <Link
-                key={a.id}
-                href={`/ses/alerts/${a.id}`}
-                className={`anim-slide-in block rounded-md p-3 border-l-4 ${a.level === "RED" ? "border-red-600 bg-red-50" : "border-amber-500 bg-amber-50"}`}
-              >
-                <p className="text-sm font-semibold text-ink">{a.school.name}</p>
-                <p className="text-xs text-slate-600">{a.reason}</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  {new Date(a.createdAt).toLocaleString("kk-KZ")} · {ALERT_STATUS_LABEL[a.status] ?? a.status}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </section>
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+              <div ref={mapRef}>
+                <MapCard schools={data.schools} unannounced={data.unannounced} basePath="/ses/school" focus={focus} onFocus={setFocus} />
+              </div>
+              {/* Алерттер панелі карта биіктігінен аспайды: ішкі тізім айналады. */}
+              <div className="relative min-h-[420px]">
+                <AlertsPanel alerts={data.alerts} onChanged={refreshAll} className="lg:absolute lg:inset-0 max-h-[560px] lg:max-h-none" />
+              </div>
+            </div>
 
-        <section className="bg-white rounded-lg p-4 space-y-2">
-          <h2 className="font-bold text-ink">Кенет тексеруге ұсынылады</h2>
-          {visibleUnannounced.length === 0 && <p className="text-sm text-slate-500">Тізім бос.</p>}
-          <div className="divide-y divide-slate-100">
-            {visibleUnannounced.map((s) => (
-              <Link
-                key={s.id}
-                href={`/ses/school/${s.id}`}
-                className="flex items-center justify-between gap-3 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-ink truncate">{s.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {FACILITY_KIND_LABEL[s.kind]} · {s.district.name}
-                  </p>
-                </div>
-                <span className={`shrink-0 text-xs font-semibold rounded-full px-2.5 py-1 ${LEVEL_BADGE[s.riskLevel]}`}>
-                  {LEVEL_LABEL[s.riskLevel]} · {s.riskScore}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
+            <InspectionTable rows={data.unannounced} onChanged={refreshAll} onShowOnMap={showOnMap} />
 
-function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className={`anim-fade-up bg-white rounded-lg p-4 border-l-4 ${color}`}>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium text-slate-500">{label}</p>
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+              {stats.data ? <JournalCard journal={stats.data.journal} /> : <div className="card h-[260px] animate-pulse" />}
+              {stats.data ? <DynamicsCard dynamics={stats.data.dynamics} /> : <div className="card h-[260px] animate-pulse" />}
+              <DistrictsCard schools={data.schools} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+              {suppliers.data ? (
+                <SuppliersCard suppliers={suppliers.data.suppliers} onChanged={refreshAll} limit={5} />
+              ) : (
+                <div className="card h-[300px] animate-pulse" />
+              )}
+              {stats.data ? (
+                <TodayInspectionsCard
+                  inspections={stats.data.inspections}
+                  prescriptions={stats.data.prescriptions}
+                  schools={data.schools}
+                  onChanged={refreshAll}
+                />
+              ) : (
+                <div className="card h-[300px] animate-pulse" />
+              )}
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 }

@@ -1,26 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { load } from "@2gis/mapgl";
 import { FACILITY_KIND_LABEL } from "@/lib/risk/labels";
+import { placeLabel, shortName, microdistrict } from "@/lib/format";
 import { AKTAU_VIEW, REGION_VIEW, ZOOM_BUTTON_CLASS, type MapSchool, type SchoolMapProps } from "./shared";
 
 type MapglApi = Awaited<ReturnType<typeof load>>;
 type MapglMap = InstanceType<MapglApi["Map"]>;
 type MapglHtmlMarker = InstanceType<MapglApi["HtmlMarker"]>;
 
-const DOT_SIZE = 16;
-const FLY = { duration: 1200 };
+const PIN = 16;
+const BUBBLE = 36;
+const FLY = { duration: 900 };
+// Бұдан кіші масштабта жасыл нысандар аудан бойынша бір көпіршікке біріктіріледі:
+// әйтпесе Ақтаудағы 450 нүкте бір дақ болып, теңізге дейін шығып кетеді.
+const DETAIL_ZOOM = 10;
 
-/** 2GIS MapGL векторлық картасы. Мектептер — тәуекел түсімен боялған HTML-нүктелер. */
-export function DgisMap({ schools, basePath, apiKey }: SchoolMapProps & { apiKey: string }) {
+function boundsOf(points: { lat: number; lng: number }[]) {
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const pad = points.length === 1 ? 0.01 : 0;
+  return {
+    southWest: [Math.min(...lngs) - pad, Math.min(...lats) - pad],
+    northEast: [Math.max(...lngs) + pad, Math.max(...lats) + pad],
+  };
+}
+
+function pinLabel(s: MapSchool) {
+  const mkr = s.address ? microdistrict(s.address) : null;
+  return mkr ? `${shortName(s.name, s.kind)} · ${mkr}` : shortName(s.name, s.kind);
+}
+
+/** 2GIS MapGL векторлық картасы. Нысандар — тәуекел түсімен боялған HTML-маркерлер. */
+export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: SchoolMapProps & { apiKey: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<MapglApi | null>(null);
   const mapRef = useRef<MapglMap | null>(null);
   const markersRef = useRef<MapglHtmlMarker[]>([]);
   const [ready, setReady] = useState(false);
-  const [selected, setSelected] = useState<MapSchool | null>(null);
+  const [detailed, setDetailed] = useState(REGION_VIEW.zoom >= DETAIL_ZOOM);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +54,8 @@ export function DgisMap({ schools, basePath, apiKey }: SchoolMapProps & { apiKey
         key: apiKey,
         lang: "ru",
       });
-      map.on("click", () => setSelected(null));
+      map.on("click", () => setSelectedId(null));
+      map.on("zoomend", () => setDetailed(map.getZoom() >= DETAIL_ZOOM));
       mapRef.current = map;
       setReady(true);
     });
@@ -46,32 +68,94 @@ export function DgisMap({ schools, basePath, apiKey }: SchoolMapProps & { apiKey
     };
   }, [apiKey]);
 
-  // SWR әр 5 секунд сайын жаңа деректер әкеледі — нүктелерді қайта саламыз (22 маркер, арзан).
+  // SWR әр 5 секунд сайын жаңа объектілер береді; маркерлерді тек деңгейлер, құрам немесе
+  // масштаб белдеуі шынымен өзгергенде ғана қайта саламыз.
+  const signature = useMemo(
+    () => `${detailed}|${schools.map((s) => `${s.id}:${s.riskLevel}`).join(",")}`,
+    [schools, detailed],
+  );
+  const schoolsRef = useRef(schools);
+  useEffect(() => {
+    schoolsRef.current = schools;
+  }, [schools]);
+
   useEffect(() => {
     const api = apiRef.current;
     const map = mapRef.current;
     if (!ready || !api || !map) return;
+    const current = schoolsRef.current;
 
     markersRef.current.forEach((m) => m.destroy());
-    markersRef.current = schools.map((school) => {
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.className = `dgis-dot dgis-${school.riskLevel} dgis-kind-${school.kind}`;
-      dot.title = school.name;
-      dot.setAttribute("aria-label", `${school.name}: ${school.riskScore}`);
-      dot.addEventListener("click", () => setSelected(school));
-      return new api.HtmlMarker(map, {
-        coordinates: [school.lng, school.lat],
-        html: dot,
-        anchor: [DOT_SIZE / 2, DOT_SIZE / 2],
-        interactive: true,
-        zIndex: school.riskLevel === "RED" ? 3 : school.riskLevel === "YELLOW" ? 2 : 1,
-      });
-    });
-  }, [schools, ready]);
+    const markers: MapglHtmlMarker[] = [];
 
-  // Таңдалған мектептің балы жаңарса, карточка да жаңарады.
-  const selectedLive = selected ? (schools.find((s) => s.id === selected.id) ?? selected) : null;
+    const addPin = (s: MapSchool, withLabel: boolean) => {
+      const el = document.createElement("div");
+      el.className = `map-pin kind-${s.kind} level-${s.riskLevel}`;
+      el.title = s.name;
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-label", `${s.name}: ${s.riskScore}`);
+      const dot = document.createElement("span");
+      dot.className = "map-dot";
+      el.appendChild(dot);
+      if (withLabel) {
+        const label = document.createElement("span");
+        label.className = "map-label";
+        label.textContent = pinLabel(s);
+        el.appendChild(label);
+      }
+      el.addEventListener("click", () => setSelectedId(s.id));
+      markers.push(
+        new api.HtmlMarker(map, {
+          coordinates: [s.lng, s.lat],
+          html: el,
+          anchor: [PIN / 2, PIN / 2],
+          interactive: true,
+          zIndex: s.riskLevel === "RED" ? 4 : s.riskLevel === "YELLOW" ? 3 : 1,
+        }),
+      );
+    };
+
+    const flagged = current.filter((s) => s.riskLevel !== "GREEN");
+    if (detailed) {
+      current.filter((s) => s.riskLevel === "GREEN").forEach((s) => addPin(s, false));
+    } else {
+      const byDistrict = new Map<string, MapSchool[]>();
+      for (const s of current) {
+        const key = s.district?.name ?? "—";
+        byDistrict.set(key, [...(byDistrict.get(key) ?? []), s]);
+      }
+      for (const [district, items] of byDistrict) {
+        const el = document.createElement("div");
+        el.className = "map-bubble";
+        el.textContent = String(items.length);
+        el.title = `${district}: ${items.length} нысан`;
+        el.addEventListener("click", () =>
+          map.fitBounds(boundsOf(items), { padding: { top: 40, bottom: 40, left: 40, right: 40 }, maxZoom: 13, animation: FLY }),
+        );
+        const lat = items.reduce((sum, s) => sum + s.lat, 0) / items.length;
+        const lng = items.reduce((sum, s) => sum + s.lng, 0) / items.length;
+        markers.push(
+          new api.HtmlMarker(map, { coordinates: [lng, lat], html: el, anchor: [BUBBLE / 2, BUBBLE / 2], interactive: true, zIndex: 0 }),
+        );
+      }
+    }
+    flagged.forEach((s) => addPin(s, true));
+    markersRef.current = markers;
+    // signature schools-тың мазмұнын білдіреді; schoolsRef арқылы соңғы деректер алынады.
+  }, [signature, ready, detailed]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !focus) return;
+    if (focus.kind === "view") {
+      map.setCenter([focus.lng, focus.lat], FLY);
+      map.setZoom(focus.zoom, FLY);
+    } else if (focus.points.length > 0) {
+      map.fitBounds(boundsOf(focus.points), { padding: { top: 50, bottom: 50, left: 50, right: 50 }, maxZoom: 15, animation: FLY });
+    }
+  }, [focus, ready]);
+
+  const selected = selectedId ? schools.find((s) => s.id === selectedId) : null;
 
   function flyTo(view: { lat: number; lng: number; zoom: number }) {
     mapRef.current?.setCenter([view.lng, view.lat], FLY);
@@ -82,32 +166,35 @@ export function DgisMap({ schools, basePath, apiKey }: SchoolMapProps & { apiKey
     <div className="relative h-full w-full rounded-lg overflow-hidden isolate">
       <div ref={containerRef} className="absolute inset-0" />
 
-      {/* Оң жақ жоғарғы бұрышта 2GIS-тің өз масштаб батырмалары тұр */}
-      <div className="absolute top-3 left-3 z-10 flex shadow-sm">
-        <button type="button" className={ZOOM_BUTTON_CLASS} onClick={() => flyTo(AKTAU_VIEW)}>
-          Ақтау
-        </button>
-        <button type="button" className={`${ZOOM_BUTTON_CLASS} border-l-0`} onClick={() => flyTo(REGION_VIEW)}>
-          Облыс
-        </button>
-      </div>
+      {controls && (
+        // Оң жақ жоғарғы бұрышта 2GIS-тің өз масштаб батырмалары тұр.
+        <div className="absolute top-3 left-3 z-10 flex shadow-sm">
+          <button type="button" className={ZOOM_BUTTON_CLASS} onClick={() => flyTo(AKTAU_VIEW)}>
+            Ақтау
+          </button>
+          <button type="button" className={`${ZOOM_BUTTON_CLASS} border-l-0`} onClick={() => flyTo(REGION_VIEW)}>
+            Облыс
+          </button>
+        </div>
+      )}
 
-      {selectedLive && (
-        <div className="anim-slide-in absolute left-3 bottom-8 z-10 bg-white rounded-md shadow-md p-3 pr-8 max-w-[260px]">
+      {selected && (
+        <div className="anim-slide-in absolute left-3 bottom-8 z-10 card shadow-md p-3 pr-8 max-w-[280px]">
           <button
             type="button"
-            onClick={() => setSelected(null)}
-            className="absolute top-1.5 right-2 text-slate-400 hover:text-ink"
+            onClick={() => setSelectedId(null)}
+            className="absolute top-1.5 right-2 text-muted hover:text-ink"
             aria-label="Жабу"
           >
             ×
           </button>
-          <p className="font-semibold text-sm text-ink">{selectedLive.name}</p>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {FACILITY_KIND_LABEL[selectedLive.kind]} · Тәуекел балы: {selectedLive.riskScore}
+          <p className="font-semibold text-sm text-ink">{selected.name}</p>
+          <p className="text-xs text-muted mt-0.5">
+            {FACILITY_KIND_LABEL[selected.kind]}
+            {selected.district && ` · ${placeLabel(selected.district.name, selected.address)}`} · балл {selected.riskScore}
           </p>
           {basePath && (
-            <Link href={`${basePath}/${selectedLive.id}`} className="text-brand-700 underline text-xs mt-1 inline-block">
+            <Link href={`${basePath}/${selected.id}`} className="text-navy-700 underline text-xs mt-1 inline-block">
               Толық ақпарат
             </Link>
           )}

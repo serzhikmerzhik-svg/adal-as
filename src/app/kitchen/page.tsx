@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
 import { compressImageToDataUrl } from "@/lib/image";
 import { PRESCRIPTION_STATUS_LABEL } from "@/lib/risk/labels";
+import { fullDate } from "@/lib/format";
 
 type KitchenLog = {
   id: string;
@@ -139,25 +140,25 @@ export default function KitchenPage() {
   }
 
   if (loading) {
-    return <div className="p-6 text-center text-slate-500">Жүктелуде...</div>;
+    return <div className="p-6 text-center text-muted">Жүктелуде...</div>;
   }
 
   return (
     <main className="min-h-screen pb-24">
-      <AppHeader subtitle="Асхана" />
+      <AppHeader subtitle="Асхана журналы" roleLabel="Асхана қызметкері" />
 
       <div className="p-4 space-y-4">
         {prescriptions.length > 0 && (
-          <section className="bg-amber-50 border border-amber-300 rounded-lg p-4 space-y-3">
-            <h2 className="font-bold text-amber-900">Ашық нұсқамалар</h2>
+          <section className="bg-warn-50 border border-warn-500 rounded-lg p-4 space-y-3">
+            <h2 className="font-bold text-warn-700">Ашық нұсқамалар</h2>
             {prescriptions.map((p) => (
-              <div key={p.id} className="bg-white rounded-xl p-3 space-y-2">
-                <p className="text-sm text-slate-800">{p.text}</p>
-                <p className="text-xs text-slate-500">
-                  Мерзімі: {new Date(p.dueAt).toLocaleDateString("kk-KZ")} · Статус: {PRESCRIPTION_STATUS_LABEL[p.status] ?? p.status}
+              <div key={p.id} className="card p-3 space-y-2">
+                <p className="text-sm text-ink">{p.text}</p>
+                <p className="text-xs text-muted">
+                  Мерзімі: {fullDate(p.dueAt)} · Статус: {PRESCRIPTION_STATUS_LABEL[p.status] ?? p.status}
                 </p>
                 {p.status === "OPEN" && (
-                  <label className="inline-block w-full text-center bg-amber-600 text-white font-semibold rounded-lg py-2 active:opacity-80">
+                  <label className="inline-block w-full text-center bg-warn-600 text-white font-semibold rounded-lg py-2 active:opacity-80">
                     {busyId === p.id ? "Жүктелуде..." : "Орындалды (фото-дәлел)"}
                     <input
                       type="file"
@@ -179,13 +180,13 @@ export default function KitchenPage() {
         <section className="flex gap-2">
           <button
             onClick={() => setShowMenuForm((v) => !v)}
-            className="flex-1 bg-brand-600 text-white font-semibold rounded-xl py-3 text-sm"
+            className="flex-1 bg-navy-700 text-white font-semibold rounded-xl py-3 text-sm"
           >
             + Мәзірге тағам қосу
           </button>
           <button
             onClick={() => setShowBatchForm((v) => !v)}
-            className="flex-1 bg-slate-700 text-white font-semibold rounded-xl py-3 text-sm"
+            className="flex-1 bg-navy-600 text-white font-semibold rounded-xl py-3 text-sm"
           >
             + Партия қабылдау
           </button>
@@ -194,11 +195,11 @@ export default function KitchenPage() {
         {showMenuForm && (
           <form
             action={handleAddMenu}
-            className="bg-white rounded-lg p-4 space-y-3 border border-slate-200"
+            className="card p-4 space-y-3 border border-line"
           >
-            <input name="name" required placeholder="Тағам атауы" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
-            <input name="portion" type="number" placeholder="Порция (г)" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
-            <button type="submit" className="w-full bg-brand-600 text-white rounded-lg py-2 font-semibold">
+            <input name="name" required placeholder="Тағам атауы" className="field" />
+            <input name="portion" type="number" placeholder="Порция (г)" className="field" />
+            <button type="submit" className="w-full bg-navy-700 text-white rounded-lg py-2 font-semibold">
               Қосу
             </button>
           </form>
@@ -207,9 +208,9 @@ export default function KitchenPage() {
         {showBatchForm && (
           <form
             action={handleAddBatch}
-            className="bg-white rounded-lg p-4 space-y-3 border border-slate-200"
+            className="card p-4 space-y-3 border border-line"
           >
-            <select name="supplierId" required className="w-full border border-slate-300 rounded-lg px-3 py-2">
+            <select name="supplierId" required className="field">
               <option value="">Жеткізушіні таңдаңыз</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id} disabled={s.blocked}>
@@ -217,19 +218,19 @@ export default function KitchenPage() {
                 </option>
               ))}
             </select>
-            <input name="batchCode" required placeholder="Партия коды" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
-            <input name="product" required placeholder="Өнім" className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+            <input name="batchCode" required placeholder="Партия коды" className="field" />
+            <input name="product" required placeholder="Өнім" className="field" />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-slate-500">Өндірілген күні</label>
-                <input name="producedAt" type="date" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                <label className="text-xs text-muted">Өндірілген күні</label>
+                <input name="producedAt" type="date" required className="field" />
               </div>
               <div>
-                <label className="text-xs text-slate-500">Жарамдылық мерзімі</label>
-                <input name="expiresAt" type="date" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                <label className="text-xs text-muted">Жарамдылық мерзімі</label>
+                <input name="expiresAt" type="date" required className="field" />
               </div>
             </div>
-            <button type="submit" className="w-full bg-slate-700 text-white rounded-lg py-2 font-semibold">
+            <button type="submit" className="w-full bg-navy-600 text-white rounded-lg py-2 font-semibold">
               Қабылдау
             </button>
           </form>
@@ -238,7 +239,7 @@ export default function KitchenPage() {
         <section className="space-y-3">
           <h2 className="font-bold text-ink">Бүгінгі мәзір</h2>
           {menuItems.length === 0 && (
-            <p className="text-sm text-slate-500">Бүгін мәзір енгізілмеген. Жоғарыдан қосыңыз.</p>
+            <p className="text-sm text-muted">Бүгін мәзір енгізілмеген. Жоғарыдан қосыңыз.</p>
           )}
           {menuItems.map((item) => {
             const lastPhoto = item.logs.find((l) => l.type === "PHOTO");
@@ -247,19 +248,19 @@ export default function KitchenPage() {
             return (
               <div
                 key={item.id}
-                className={`bg-white rounded-lg p-4 space-y-3 border ${item.blocked ? "border-red-400" : "border-slate-200"}`}
+                className={`card p-4 space-y-3 border ${item.blocked ? "border-bad-300" : "border-line"}`}
               >
                 {item.blocked && (
-                  <p className="text-sm font-bold text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                  <p className="text-sm font-bold text-bad-600 bg-bad-50 rounded-lg px-3 py-2">
                     Уақытша берілмесін — СЭС шешімін күтуде
                   </p>
                 )}
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-semibold text-ink">{item.name}</p>
-                    {item.standardPortionG && <p className="text-xs text-slate-500">Порция: {item.standardPortionG} г</p>}
+                    {item.standardPortionG && <p className="text-xs text-muted">Порция: {item.standardPortionG} г</p>}
                     {item.batch && (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted">
                         Партия: {item.batch.code} · {item.batch.supplier.name}
                       </p>
                     )}
@@ -270,7 +271,7 @@ export default function KitchenPage() {
                   )}
                 </div>
 
-                <label className="block w-full text-center bg-brand-600 text-white font-semibold rounded-lg py-2.5 active:opacity-80">
+                <label className="block w-full text-center bg-navy-700 text-white font-semibold rounded-lg py-2.5 active:opacity-80">
                   {busyId === item.id ? "Жүктелуде..." : lastPhoto ? "Фотоны жаңарту" : "Порция фотосы"}
                   <input
                     type="file"
@@ -286,36 +287,36 @@ export default function KitchenPage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Тоңазытқыш, °C</label>
+                    <label className="text-xs text-muted">Тоңазытқыш, °C</label>
                     <div className="flex gap-1">
                       <input
                         type="number"
                         value={tempInputs[fridgeKey] ?? ""}
                         onChange={(e) => setTempInputs((s) => ({ ...s, [fridgeKey]: e.target.value }))}
-                        className="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm"
+                        className="w-full border border-line-strong rounded-lg px-2 py-2 text-sm"
                       />
                       <button
                         onClick={() => handleTemp(item.id, "FRIDGE_TEMP")}
                         disabled={busyId === fridgeKey}
-                        className="bg-slate-800 text-white rounded-lg px-3 text-sm font-semibold"
+                        className="bg-navy-700 text-white rounded-lg px-3 text-sm font-semibold"
                       >
                         ОК
                       </button>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Ыстық тағам, °C</label>
+                    <label className="text-xs text-muted">Ыстық тағам, °C</label>
                     <div className="flex gap-1">
                       <input
                         type="number"
                         value={tempInputs[hotKey] ?? ""}
                         onChange={(e) => setTempInputs((s) => ({ ...s, [hotKey]: e.target.value }))}
-                        className="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm"
+                        className="w-full border border-line-strong rounded-lg px-2 py-2 text-sm"
                       />
                       <button
                         onClick={() => handleTemp(item.id, "HOT_TEMP")}
                         disabled={busyId === hotKey}
-                        className="bg-slate-800 text-white rounded-lg px-3 text-sm font-semibold"
+                        className="bg-navy-700 text-white rounded-lg px-3 text-sm font-semibold"
                       >
                         ОК
                       </button>
@@ -330,7 +331,7 @@ export default function KitchenPage() {
                     .map((l) => (
                       <span
                         key={l.id}
-                        className={`text-xs rounded-full px-2 py-1 ${l.isViolation ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}
+                        className={`text-xs rounded-full px-2 py-1 ${l.isViolation ? "bg-bad-100 text-bad-700" : "bg-page text-muted"}`}
                       >
                         {l.type === "FRIDGE_TEMP" ? "Тоңазытқыш" : "Ыстық"}: {l.valueC}°C
                       </span>

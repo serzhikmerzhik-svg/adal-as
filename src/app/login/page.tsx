@@ -8,7 +8,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white">
+      <header className="bg-white border-b border-line">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
           <Link href="/">
             <Logo />

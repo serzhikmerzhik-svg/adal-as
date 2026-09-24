@@ -39,12 +39,12 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white">
+      <header className="bg-white border-b border-line">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo />
           <Link
             href={cabinetHref ?? "/login"}
-            className="border border-ink px-5 py-1.5 text-sm text-ink hover:bg-ink hover:text-white transition-colors"
+            className="btn btn-outline"
           >
             {cabinetHref ? "Кабинет" : "Кіру"}
           </Link>
@@ -54,7 +54,7 @@ export default async function Home() {
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-10">
         <section className="anim-fade-up text-center space-y-2">
           <h1 className="text-2xl sm:text-3xl font-bold text-ink">Асханалар мен СЭС арасындағы ерте ескерту</h1>
-          <p className="text-slate-600 max-w-2xl mx-auto">
+          <p className="text-muted max-w-2xl mx-auto">
             Ақтаудың барлық асханалары, мектептері мен балабақшалары бір картада. Улану туралы ақпарат
             ауруханаға түскенде емес, алғашқы белгілерде келеді.
           </p>
@@ -69,32 +69,32 @@ export default async function Home() {
             <Link
               key={t.label}
               href={`/login?as=${t.login}`}
-              className="tile anim-fade-up bg-white rounded-lg p-5 flex flex-col items-center text-center gap-3"
+              className="tile anim-fade-up card p-5 flex flex-col items-center text-center gap-3"
               style={{ animationDelay: `${150 + i * 60}ms` }}
             >
               <t.Icon />
               <span className="font-medium text-ink">{t.label}</span>
-              <span className="text-xs text-slate-500">{t.hint}</span>
+              <span className="text-xs text-muted">{t.hint}</span>
             </Link>
           ))}
           <div
-            className="tile anim-fade-up bg-white rounded-lg p-5 flex flex-col items-center text-center gap-3"
+            className="tile anim-fade-up card p-5 flex flex-col items-center text-center gap-3"
             style={{ animationDelay: "390ms" }}
           >
             <ParentIcon />
             <span className="font-medium text-ink">Ата-ана, келуші</span>
-            <span className="text-xs text-slate-500">QR арқылы мәзір мен баға, логинсіз</span>
+            <span className="text-xs text-muted">QR арқылы мәзір мен баға, логинсіз</span>
           </div>
           <Link
             href="/login?as=admin"
-            className="tile anim-fade-up col-span-2 sm:col-span-3 bg-white rounded-lg p-5 flex items-center justify-between gap-4"
+            className="tile anim-fade-up card col-span-2 sm:col-span-3 p-5 flex items-center justify-between gap-4"
             style={{ animationDelay: "450ms" }}
           >
             <div>
               <p className="font-semibold text-ink">Демо сценарийі</p>
-              <p className="text-sm text-slate-500">Белгі → қызыл дабыл → партияны қадағалау → нұсқама → жабу</p>
+              <p className="text-sm text-muted">Белгі → қызыл дабыл → партияны қадағалау → нұсқама → жабу</p>
             </div>
-            <span className="anim-float bg-brand-50 rounded-lg p-3">
+            <span className="anim-float bg-navy-50 rounded-lg p-3">
               <DemoIcon className="w-9 h-9" />
             </span>
           </Link>
@@ -104,11 +104,11 @@ export default async function Home() {
           {STATS.map((s, i) => (
             <div
               key={s.label}
-              className="anim-fade-up bg-white rounded-lg p-5"
+              className="anim-fade-up card p-5"
               style={{ animationDelay: `${500 + i * 60}ms` }}
             >
-              <p className="text-2xl font-bold text-brand-700">{s.value}</p>
-              <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+              <p className="text-2xl font-bold text-navy-700">{s.value}</p>
+              <p className="text-xs text-muted mt-1">{s.label}</p>
             </div>
           ))}
         </section>
@@ -119,22 +119,22 @@ export default async function Home() {
             {STEPS.map((s, i) => (
               <div
                 key={s.n}
-                className="anim-fade-up bg-white rounded-lg p-5 space-y-2"
+                className="anim-fade-up card p-5 space-y-2"
                 style={{ animationDelay: `${650 + i * 80}ms` }}
               >
-                <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-brand-50 text-brand-700 font-bold text-sm">
+                <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-navy-50 text-navy-700 font-bold text-sm">
                   {s.n}
                 </span>
                 <p className="font-semibold text-ink">{s.title}</p>
-                <p className="text-sm text-slate-600">{s.text}</p>
+                <p className="text-sm text-muted">{s.text}</p>
               </div>
             ))}
           </div>
         </section>
       </main>
 
-      <footer className="bg-white">
-        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
+      <footer className="bg-white border-t border-line">
+        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
           <span>Smart City Aktau хакатоны · Mangystau Hub</span>
           <span>Оқушылардың жеке деректері сақталмайды</span>
         </div>

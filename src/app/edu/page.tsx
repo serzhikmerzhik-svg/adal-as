@@ -1,122 +1,66 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useState } from "react";
 import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
-import { LEVEL_LABEL, LEVEL_BADGE, ALERT_STATUS_LABEL } from "@/lib/risk/labels";
+import type { MapFocus } from "@/components/map/shared";
+import { AlertsPanel } from "@/components/ses/AlertsPanel";
+import { DistrictsCard } from "@/components/ses/DistrictsCard";
+import { DynamicsCard } from "@/components/ses/DynamicsCard";
+import { InspectionTable } from "@/components/ses/InspectionTable";
+import { KpiRow } from "@/components/ses/KpiRow";
+import { MapCard } from "@/components/ses/MapCard";
+import { fetcher, type Kind, type Overview, type Stats } from "@/components/ses/types";
 
-const SchoolMap = dynamic(() => import("@/components/SchoolMap").then((m) => m.SchoolMap), { ssr: false });
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-type School = {
-  id: string;
-  name: string;
-  kind: "SCHOOL" | "KINDERGARTEN" | "CANTEEN";
-  lat: number;
-  lng: number;
-  riskScore: number;
-  riskLevel: "GREEN" | "YELLOW" | "RED";
-  district: { id: string; name: string };
-};
-
-type Alert = {
-  id: string;
-  level: "YELLOW" | "RED";
-  reason: string;
-  status: string;
-  createdAt: string;
-  school: { name: string; kind: School["kind"] };
-};
-
-// Білім басқармасы тек білім беру ұйымдарын көреді (қоғамдық асханалар — СЭС құзыреті).
-const isEducation = (kind: School["kind"]) => kind !== "CANTEEN";
+// Білім басқармасы тек білім беру ұйымдарын көреді (қоғамдық асханалар — СЭС құзыреті)
+// және ешқандай әрекет жасамайды: тексеру мен нұсқама — СЭС инспекторының шешімі.
+const isEducation = (kind: Kind) => kind !== "CANTEEN";
 
 export default function EduPage() {
-  const { data } = useSWR("/api/ses/overview", fetcher, { refreshInterval: 5000 });
+  const overview = useSWR<Overview>("/api/ses/overview", fetcher, { refreshInterval: 5000 });
+  const stats = useSWR<Stats>("/api/ses/stats", fetcher, { refreshInterval: 30000 });
+  const [focus, setFocus] = useState<MapFocus | null>(null);
+  const data = overview.data;
 
-  if (!data) return <div className="p-6 text-center text-slate-500">Жүктелуде...</div>;
-
-  const schools = (data.schools as School[]).filter((s) => isEducation(s.kind));
-  const alerts = (data.alerts as Alert[]).filter((a) => isEducation(a.school.kind));
+  const schools = data ? data.schools.filter((s) => isEducation(s.kind)) : [];
+  const alerts = data ? data.alerts.filter((a) => isEducation(a.school.kind)) : [];
+  const unannounced = data ? data.unannounced.filter((s) => isEducation(s.kind)) : [];
+  const open = alerts.filter((a) => a.status !== "CLOSED");
   const kpi = {
+    total: schools.length,
     green: schools.filter((s) => s.riskLevel === "GREEN").length,
     yellow: schools.filter((s) => s.riskLevel === "YELLOW").length,
     red: schools.filter((s) => s.riskLevel === "RED").length,
-    openAlerts: alerts.filter((a) => a.status !== "CLOSED").length,
-    overduePrescriptions: data.kpi.overduePrescriptions as number,
+    openAlerts: open.length,
+    openRed: open.filter((a) => a.level === "RED").length,
+    openYellow: open.filter((a) => a.level === "YELLOW").length,
+    overduePrescriptions: data?.kpi.overduePrescriptions ?? 0,
   };
 
-  const byDistrict = new Map<string, { name: string; green: number; yellow: number; red: number }>();
-  for (const s of schools) {
-    const entry = byDistrict.get(s.district.id) ?? { name: s.district.name, green: 0, yellow: 0, red: 0 };
-    if (s.riskLevel === "GREEN") entry.green += 1;
-    else if (s.riskLevel === "YELLOW") entry.yellow += 1;
-    else entry.red += 1;
-    byDistrict.set(s.district.id, entry);
-  }
-
   return (
-    <main className="min-h-screen pb-10">
-      <AppHeader subtitle="Білім басқармасы — шолу" />
-
-      <div className="p-4 space-y-4 max-w-7xl mx-auto">
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard label="Жасыл" value={kpi.green} color="border-brand-600 text-brand-700" />
-          <KpiCard label="Сары" value={kpi.yellow} color="border-amber-500 text-amber-700" />
-          <KpiCard label="Қызыл" value={kpi.red} color="border-red-600 text-red-700" />
-          <KpiCard label="Ашық алерттер" value={kpi.openAlerts} color="border-sky-accent text-sky-accent-dark" />
-          <KpiCard label="Мерзімі өткен нұсқама" value={kpi.overduePrescriptions} color="border-orange-500 text-orange-700" />
-        </section>
-
-        <section className="grid lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 bg-white rounded-lg p-3 h-[420px]">
-            <SchoolMap schools={schools} />
-          </div>
-
-          <div className="bg-white rounded-lg p-4 space-y-3 max-h-[420px] overflow-y-auto">
-            <h2 className="font-bold text-ink">Алерттер лентасы</h2>
-            {alerts.length === 0 && <p className="text-sm text-slate-500">Алерттер жоқ.</p>}
-            {alerts.map((a: Alert) => (
-              <div
-                key={a.id}
-                className={`anim-slide-in rounded-md p-3 border-l-4 ${a.level === "RED" ? "border-red-600 bg-red-50" : "border-amber-500 bg-amber-50"}`}
-              >
-                <p className="text-sm font-semibold text-ink">{a.school.name}</p>
-                <p className="text-xs text-slate-600">{a.reason}</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  {new Date(a.createdAt).toLocaleString("kk-KZ")} · {ALERT_STATUS_LABEL[a.status] ?? a.status}
-                </p>
+    <div className="min-h-screen pb-12">
+      <AppHeader subtitle="Білім беру ұйымдары · Маңғыстау облысы" roleLabel="Білім басқармасы" live />
+      <main className="max-w-[1440px] mx-auto px-4 lg:px-8 py-6 space-y-5">
+        {!data ? (
+          <div className="card h-[540px] animate-pulse" />
+        ) : (
+          <>
+            <p className="text-sm text-muted">Тек оқу режимі: мектептер мен балабақшалар. Тексеру мен нұсқаманы СЭС инспекторы тағайындайды.</p>
+            <KpiRow kpi={kpi} />
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+              <MapCard schools={schools} unannounced={unannounced} focus={focus} onFocus={setFocus} />
+              <div className="relative min-h-[420px]">
+                <AlertsPanel alerts={alerts} readOnly className="lg:absolute lg:inset-0 max-h-[560px] lg:max-h-none" />
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="bg-white rounded-lg p-4">
-          <h2 className="font-bold text-ink mb-3">Аудандар бойынша статистика</h2>
-          <div className="divide-y divide-slate-100">
-            {Array.from(byDistrict.values()).map((d) => (
-              <div key={d.name} className="flex items-center justify-between py-2">
-                <span className="font-medium text-slate-800">{d.name}</span>
-                <div className="flex gap-2">
-                  <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${LEVEL_BADGE.GREEN}`}>{LEVEL_LABEL.GREEN}: {d.green}</span>
-                  <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${LEVEL_BADGE.YELLOW}`}>{LEVEL_LABEL.YELLOW}: {d.yellow}</span>
-                  <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${LEVEL_BADGE.RED}`}>{LEVEL_LABEL.RED}: {d.red}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className={`anim-fade-up bg-white rounded-lg p-4 border-l-4 ${color}`}>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium text-slate-500">{label}</p>
+            </div>
+            <InspectionTable rows={unannounced} readOnly />
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <DistrictsCard schools={schools} />
+              {stats.data ? <DynamicsCard dynamics={stats.data.dynamics} /> : <div className="card h-[260px] animate-pulse" />}
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 }

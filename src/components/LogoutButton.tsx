@@ -11,7 +11,7 @@ export function LogoutButton() {
         router.push("/login");
         router.refresh();
       }}
-      className="border border-ink px-4 py-1.5 text-sm text-ink hover:bg-ink hover:text-white transition-colors"
+      className="btn btn-outline"
     >
       Шығу
     </button>

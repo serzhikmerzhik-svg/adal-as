@@ -7,19 +7,19 @@ const SLIDES = [
   {
     title: "Ерте ескерту",
     text: "2 сағатта 3+ оқушыда белгі — СЭС-ке бірден қызыл дабыл",
-    bg: "bg-sky-accent",
+    bg: "bg-navy-700",
     Icon: AlertIcon,
   },
   {
     title: "Партияны қадағалау",
     text: "Сол партияны алған басқа мектептер, балабақшалар мен асханалар бірден анықталады",
-    bg: "bg-brand-600",
+    bg: "bg-ok-600",
     Icon: TraceIcon,
   },
   {
     title: "Тәуекел балы",
     text: "Әр нысанға 0–100 балл: кенет тексеруді қайдан бастау керегі көрінеді",
-    bg: "bg-sky-accent-dark",
+    bg: "bg-navy-600",
     Icon: ChartIcon,
   },
 ];
@@ -94,7 +94,7 @@ export function HeroCarousel() {
             type="button"
             onClick={() => setIndex(i)}
             aria-label={`${i + 1}-слайд`}
-            className={`h-1 rounded-full transition-all duration-300 ${i === index ? "w-8 bg-slate-500" : "w-8 bg-slate-300"}`}
+            className={`h-1 rounded-full transition-all duration-300 ${i === index ? "w-8 bg-navy-700" : "w-8 bg-line-strong"}`}
           />
         ))}
       </div>

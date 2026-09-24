@@ -4,7 +4,7 @@ function Svg({ className = "w-7 h-7", children }: IconProps & { children: React.
   return (
     <svg
       viewBox="0 0 24 24"
-      className={`${className} text-brand-600`}
+      className={`${className} text-navy-700`}
       fill="none"
       stroke="currentColor"
       strokeWidth={1.6}
