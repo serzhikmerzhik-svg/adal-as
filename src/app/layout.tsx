@@ -8,7 +8,7 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Адал Ас",
+  title: "Adal As",
   description: "Мектеп асханасы мен СЭС арасындағы ерте ескерту жүйесі",
 };
 

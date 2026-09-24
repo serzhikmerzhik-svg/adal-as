@@ -19,7 +19,7 @@ export function Logo({ subtitle }: { subtitle?: string }) {
     <div className="flex items-center gap-2.5">
       <LogoMark />
       <div className="leading-tight">
-        <p className="font-bold text-ink">Адал Ас</p>
+        <p className="font-bold text-ink">Adal As</p>
         {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
       </div>
     </div>
