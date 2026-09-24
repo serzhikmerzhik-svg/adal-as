@@ -56,14 +56,25 @@ enum PrescriptionStatus {
   REJECTED
 }
 
+enum FacilityKind {
+  SCHOOL
+  KINDERGARTEN
+  CANTEEN
+}
+
 model District {
   id      String   @id @default(cuid())
   name    String
   schools School[]
 }
 
+// Тарихи себеппен "School" деп аталады, бірақ кез келген тамақтану нысанын білдіреді:
+// мектеп, балабақша немесе қоғамдық асхана (kind өрісі).
 model School {
-  id               String    @id @default(cuid())
+  id               String       @id @default(cuid())
+  kind             FacilityKind @default(SCHOOL)
+  dgisId           String?      @unique
+  rubric           String?
   name             String
   address          String
   lat              Float

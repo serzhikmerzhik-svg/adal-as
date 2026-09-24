@@ -5,18 +5,15 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
-import { ALERT_STATUS_LABEL } from "@/lib/risk/labels";
+import { KindFilter, countByKind, type KindFilterValue } from "@/components/KindFilter";
+import type { MapSchool } from "@/components/map/shared";
+import { ALERT_STATUS_LABEL, FACILITY_KIND_LABEL, LEVEL_BADGE, LEVEL_LABEL } from "@/lib/risk/labels";
 
 const SchoolMap = dynamic(() => import("@/components/SchoolMap").then((m) => m.SchoolMap), { ssr: false });
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-const LEVEL_LABEL: Record<string, string> = { GREEN: "Жасыл", YELLOW: "Сары", RED: "Қызыл" };
-const LEVEL_BADGE: Record<string, string> = {
-  GREEN: "bg-brand-100 text-brand-700",
-  YELLOW: "bg-amber-100 text-amber-700",
-  RED: "bg-red-100 text-red-700",
-};
+type OverviewSchool = MapSchool & { district: { name: string } };
 
 type Alert = {
   id: string;
@@ -30,6 +27,7 @@ type Alert = {
 export default function SesPage() {
   const { data } = useSWR("/api/ses/overview", fetcher, { refreshInterval: 5000 });
   const [toast, setToast] = useState<string | null>(null);
+  const [kind, setKind] = useState<KindFilterValue>("ALL");
   const knownAlertIds = useRef<Set<string> | null>(null);
 
   useEffect(() => {
@@ -51,7 +49,15 @@ export default function SesPage() {
     return <div className="p-6 text-center text-slate-500">Жүктелуде...</div>;
   }
 
-  const { schools, alerts, kpi, unannouncedList } = data;
+  const { schools, alerts, kpi, unannouncedList } = data as {
+    schools: OverviewSchool[];
+    alerts: Alert[];
+    kpi: Record<string, number>;
+    unannouncedList: OverviewSchool[];
+  };
+  const byKind = (list: OverviewSchool[]) => (kind === "ALL" ? list : list.filter((s) => s.kind === kind));
+  const visibleSchools = byKind(schools);
+  const visibleUnannounced = byKind(unannouncedList);
 
   return (
     <main className="min-h-screen pb-10">
@@ -72,9 +78,11 @@ export default function SesPage() {
           <KpiCard label="Мерзімі өткен нұсқама" value={kpi.overduePrescriptions} color="border-orange-500 text-orange-700" />
         </section>
 
+        <KindFilter value={kind} onChange={setKind} counts={countByKind(schools)} />
+
         <section className="grid lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 bg-white rounded-lg p-3 h-[420px]">
-            <SchoolMap schools={schools} basePath="/ses/school" />
+            <SchoolMap schools={visibleSchools} basePath="/ses/school" />
           </div>
 
           <div className="bg-white rounded-lg p-4 space-y-3 max-h-[420px] overflow-y-auto">
@@ -98,19 +106,21 @@ export default function SesPage() {
 
         <section className="bg-white rounded-lg p-4 space-y-2">
           <h2 className="font-bold text-ink">Кенет тексеруге ұсынылады</h2>
-          {unannouncedList.length === 0 && <p className="text-sm text-slate-500">Тізім бос.</p>}
+          {visibleUnannounced.length === 0 && <p className="text-sm text-slate-500">Тізім бос.</p>}
           <div className="divide-y divide-slate-100">
-            {unannouncedList.map((s: { id: string; name: string; riskScore: number; riskLevel: string; district: { name: string } }) => (
+            {visibleUnannounced.map((s) => (
               <Link
                 key={s.id}
                 href={`/ses/school/${s.id}`}
-                className="flex items-center justify-between py-2.5"
+                className="flex items-center justify-between gap-3 py-2.5"
               >
-                <div>
-                  <p className="font-medium text-ink">{s.name}</p>
-                  <p className="text-xs text-slate-500">{s.district.name}</p>
+                <div className="min-w-0">
+                  <p className="font-medium text-ink truncate">{s.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {FACILITY_KIND_LABEL[s.kind]} · {s.district.name}
+                  </p>
                 </div>
-                <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${LEVEL_BADGE[s.riskLevel]}`}>
+                <span className={`shrink-0 text-xs font-semibold rounded-full px-2.5 py-1 ${LEVEL_BADGE[s.riskLevel]}`}>
                   {LEVEL_LABEL[s.riskLevel]} · {s.riskScore}
                 </span>
               </Link>

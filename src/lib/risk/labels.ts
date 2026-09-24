@@ -43,4 +43,16 @@ export const INSPECTION_TYPE_LABEL: Record<string, string> = {
   UNSCHEDULED: "Жоспардан тыс",
 };
 
+export const FACILITY_KIND_LABEL: Record<string, string> = {
+  SCHOOL: "Мектеп",
+  KINDERGARTEN: "Балабақша",
+  CANTEEN: "Асхана",
+};
+
+export const FACILITY_KIND_PLURAL: Record<string, string> = {
+  SCHOOL: "Мектептер",
+  KINDERGARTEN: "Балабақшалар",
+  CANTEEN: "Асханалар",
+};
+
 export const symptomsText = (symptoms: string[]) => symptoms.map((s) => SYMPTOM_LABELS[s] ?? s).join(", ");

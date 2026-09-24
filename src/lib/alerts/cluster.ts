@@ -78,7 +78,7 @@ export async function checkClusterAndAlert(schoolId: string) {
         matched.map((batchId) => ({
           schoolId: school.id,
           level: "YELLOW" as const,
-          reason: `Партия №${batchCodes.get(batchId)}: "${sourceSchool.name}" мектебінде улану кластері анықталды`,
+          reason: `Партия №${batchCodes.get(batchId)}: «${sourceSchool.name}» нысанында улану кластері анықталды`,
           relatedBatchId: batchId,
           details: { sourceSchoolId: schoolId, sourceAlertId: alert.id, batchCode: batchCodes.get(batchId) ?? null },
         })),

@@ -22,13 +22,13 @@ const ROLE_TILES = [
 const STATS = [
   { value: "~300", label: "Бесшоқыдағы улану зардап шеккендері, 2024" },
   { value: "2", label: "Маңғыстаудағы жаппай улану, 2024–2025" },
-  { value: "22", label: "Облыстың 7 ауданындағы мектеп (демо)" },
+  { value: "557", label: "Асхана, мектеп, балабақша — 2GIS деректері" },
   { value: "5 сек", label: "СЭС дашбордының жаңару жиілігі" },
 ];
 
 const STEPS = [
   { n: "1", title: "Деректер", text: "Асхана күн сайын порция фотосын, температураны, партияны енгізеді." },
-  { n: "2", title: "Тәуекел", text: "Жүйе әр мектепке 0–100 балл есептейді: жасыл, сары, қызыл." },
+  { n: "2", title: "Тәуекел", text: "Жүйе әр нысанға 0–100 балл есептейді: жасыл, сары, қызыл." },
   { n: "3", title: "Дабыл", text: "Белгілер кластері — СЭС-ке қызыл дабыл, мәзір бұғатталады." },
   { n: "4", title: "Түзету", text: "Инспектор нұсқама береді, асхана фото-дәлелмен орындайды." },
 ];
@@ -53,9 +53,10 @@ export default async function Home() {
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-10">
         <section className="anim-fade-up text-center space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-ink">Мектеп асханасы мен СЭС арасындағы ерте ескерту</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink">Асханалар мен СЭС арасындағы ерте ескерту</h1>
           <p className="text-slate-600 max-w-2xl mx-auto">
-            Улану туралы ақпарат балалар ауруханаға түскенде емес, алғашқы белгілерде келеді.
+            Ақтаудың барлық асханалары, мектептері мен балабақшалары бір картада. Улану туралы ақпарат
+            ауруханаға түскенде емес, алғашқы белгілерде келеді.
           </p>
         </section>
 
@@ -81,8 +82,8 @@ export default async function Home() {
             style={{ animationDelay: "390ms" }}
           >
             <ParentIcon />
-            <span className="font-medium text-ink">Ата-ана</span>
-            <span className="text-xs text-slate-500">Мектептегі QR арқылы, логинсіз</span>
+            <span className="font-medium text-ink">Ата-ана, келуші</span>
+            <span className="text-xs text-slate-500">QR арқылы мәзір мен баға, логинсіз</span>
           </div>
           <Link
             href="/login?as=admin"

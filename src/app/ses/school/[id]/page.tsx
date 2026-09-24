@@ -12,6 +12,7 @@ import {
   PRESCRIPTION_STATUS_LABEL,
   INSPECTION_TYPE_LABEL,
   symptomsText,
+  FACILITY_KIND_LABEL,
 } from "@/lib/risk/labels";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -80,7 +81,10 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
       <div className="p-4 max-w-5xl mx-auto space-y-4">
         <section className="bg-white rounded-lg p-4 flex flex-wrap items-center gap-4 justify-between">
           <div>
-            <p className="text-sm text-slate-500">{school.district.name} · {school.address}</p>
+            <p className="text-sm text-slate-500">
+              {FACILITY_KIND_LABEL[school.kind]}
+              {school.rubric && ` (${school.rubric}, 2GIS)`} · {school.district.name} · {school.address}
+            </p>
             <p className="text-3xl font-bold text-ink mt-1">
               {school.riskScore} <span className={`text-sm rounded-full px-2 py-1 ${LEVEL_BADGE[school.riskLevel]}`}>{LEVEL_LABEL[school.riskLevel]}</span>
             </p>

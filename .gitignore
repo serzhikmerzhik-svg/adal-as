@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# 2GIS Catalog деректері: ашық репозиторийде қайта таратылмайды (scripts/fetch-2gis.mjs)
+/prisma/data/
 
 # vercel
 .vercel

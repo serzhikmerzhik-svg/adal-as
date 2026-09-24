@@ -1,15 +1,27 @@
 import { randomUUID } from "node:crypto";
-import { PrismaClient, type Prisma, type RiskLevel } from "@prisma/client";
+import { existsSync, readFileSync } from "node:fs";
+import { PrismaClient, type FacilityKind, type Prisma, type RiskLevel } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { recomputeSchoolRisk } from "../src/lib/risk/score";
 
 const prisma = new PrismaClient();
 
-// Мектеп атаулары мен координаттары демо үшін берілген (2GIS/білім басқармасынан алынған
-// нақты тізіммен кейін ауыстырылады).
+// Нысандар (асханалар, мектептер, балабақшалар) — 2GIS Catalog API-ден алынған нақты тізім
+// (scripts/fetch-2gis.mjs → prisma/data/facilities.json). Асхана журналы, бағалар, партиялар
+// мен тәуекел тарихы — демо үшін жасалған деректер.
 //
-// Жолдар бір-бірден емес, createMany арқылы топтап жазылады: Supabase-ке әр сұраныс
-// желі арқылы жүреді, сондықтан мыңдаған жеке INSERT сағаттарға созылады.
+// Жолдар createMany арқылы үлкен топтармен жазылады: Supabase-ке әр сұраныс желі арқылы жүреді.
+
+type FacilityJson = {
+  dgisId: string;
+  kind: FacilityKind;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  rubric: string;
+  district: string;
+};
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -27,7 +39,7 @@ function randInt(min: number, max: number) {
 }
 
 async function insertChunked<T>(label: string, rows: T[], insert: (chunk: T[]) => Promise<unknown>) {
-  const size = 1000;
+  const size = 5000;
   for (let i = 0; i < rows.length; i += size) {
     await insert(rows.slice(i, i + size));
   }
@@ -51,11 +63,31 @@ async function clearAll() {
   await prisma.district.deleteMany();
 }
 
-// Әр мектептің деректері осы сценарийге сай әдейі құрылады, сондықтан нақты тәуекел
-// логикасы оларды күтілген деңгейге шығарады (жасыл ≈0, демо ≈25–33, сарылар ≈43–45).
+// Әр нысанның деректері осы сценарийге сай әдейі құрылады, сондықтан нақты тәуекел
+// логикасы оларды күтілген деңгейге шығарады (жасыл = 0, демо ≈ 25–33, сарылар ≈ 43–45).
 type Scenario = "green" | "demo" | "yellowTemp" | "yellowPhoto" | "yellowRating";
 
+const HISTORY_DAYS = { green: 14, scenario: 30 }; // тәуекел терезелері ≤ 14 күн
+const MENU = {
+  SCHOOL: ["Көже", "Ет тұшпара", "Палау", "Балық котлеті", "Макарон бефстроганов", "Сорпа"],
+  KINDERGARTEN: ["Сүт ботқасы", "Тауық сорпасы", "Картоп пюресі", "Бу котлеті", "Жеміс компоты"],
+  CANTEEN: ["Бешбармақ", "Лағман", "Палау", "Манты", "Сорпа", "Котлет гарнирмен"],
+};
+const PEOPLE: Record<FacilityKind, [number, number]> = {
+  SCHOOL: [300, 1200],
+  KINDERGARTEN: [60, 280],
+  CANTEEN: [80, 400],
+};
+
 async function main() {
+  // 2GIS деректерін ашық репозиторийде қайта таратпау үшін бұл файл git-ке кірмейді.
+  const dataFile = "prisma/data/facilities.json";
+  if (!existsSync(dataFile)) {
+    throw new Error(`${dataFile} жоқ. Алдымен іске қосыңыз: node --env-file=.env scripts/fetch-2gis.mjs`);
+  }
+  const facilitiesJson: FacilityJson[] = JSON.parse(readFileSync(dataFile, "utf8"));
+  console.log(`2GIS нысандары: ${facilitiesJson.length}`);
+
   console.log("Тазалау...");
   await clearAll();
 
@@ -71,64 +103,53 @@ async function main() {
   const districtIds = new Map(districtNames.map((name) => [name, randomUUID()]));
   await prisma.district.createMany({ data: districtNames.map((name) => ({ id: districtIds.get(name)!, name })) });
 
-  const schoolSeeds = [
-    { name: "№1 мектеп-гимназиясы", address: "Ақтау, 5-шағын аудан", lat: 43.6525, lng: 51.1725, district: "Ақтау қ." },
-    { name: "№2 жалпы білім беретін мектебі", address: "Ақтау, 3-шағын аудан", lat: 43.6481, lng: 51.1653, district: "Ақтау қ." },
-    { name: "№4 мектеп-лицейі", address: "Ақтау, 7-шағын аудан", lat: 43.6612, lng: 51.1892, district: "Ақтау қ." },
-    { name: "№5 жалпы білім беретін мектебі", address: "Ақтау, 12-шағын аудан", lat: 43.6702, lng: 51.2015, district: "Ақтау қ.", isDemo: true },
-    { name: "№6 мектебі", address: "Ақтау, 9-шағын аудан", lat: 43.6389, lng: 51.1487, district: "Ақтау қ." },
-    { name: "№8 дарынды балаларға арналған мектеп", address: "Ақтау, 4-шағын аудан", lat: 43.6551, lng: 51.1601, district: "Ақтау қ." },
-    { name: "№10 жалпы білім беретін мектебі", address: "Ақтау, 14-шағын аудан", lat: 43.6789, lng: 51.2231, district: "Ақтау қ." },
-    { name: "№12 мектебі", address: "Ақтау, 1-шағын аудан", lat: 43.6435, lng: 51.1398, district: "Ақтау қ." },
-    { name: "№15 мектеп-лицейі", address: "Ақтау, 15-шағын аудан", lat: 43.6655, lng: 51.2102, district: "Ақтау қ." },
-    { name: "№17 жалпы білім беретін мектебі", address: "Ақтау, 6-шағын аудан", lat: 43.6499, lng: 51.1799, district: "Ақтау қ." },
-    { name: "№19 мектебі", address: "Ақтау, 2-шағын аудан", lat: 43.6412, lng: 51.1552, district: "Ақтау қ." },
-    { name: "№22 мектеп-гимназиясы", address: "Ақтау, 30-шағын аудан", lat: 43.6845, lng: 51.235, district: "Ақтау қ." },
-    { name: "Жаңаөзен №1 мектебі", address: "Жаңаөзен қ., Достық көшесі", lat: 43.3401, lng: 52.8602, district: "Жаңаөзен қ." },
-    { name: "Жаңаөзен №3 мектебі", address: "Жаңаөзен қ., Абай көшесі", lat: 43.3355, lng: 52.8534, district: "Жаңаөзен қ." },
-    { name: "Жаңаөзен №5 мектебі", address: "Жаңаөзен қ., Тәуелсіздік даңғылы", lat: 43.3448, lng: 52.8677, district: "Жаңаөзен қ." },
-    { name: "Мұнайлы ауданы №2 мектебі", address: "Мұнайлы ауданы, Атамекен а.", lat: 43.5978, lng: 51.3822, district: "Мұнайлы ауданы" },
-    { name: "Мұнайлы ауданы №4 мектебі", address: "Мұнайлы ауданы, Қызылтөбе а.", lat: 43.5601, lng: 51.4213, district: "Мұнайлы ауданы" },
-    { name: "Форт-Шевченко мектебі", address: "Түпқараған ауданы, Форт-Шевченко қ.", lat: 44.51, lng: 50.26, district: "Түпқараған ауданы" },
-    { name: "Құрық мектебі", address: "Қарақия ауданы, Құрық кенті", lat: 43.19, lng: 51.67, district: "Қарақия ауданы" },
-    { name: "Шетпе мектебі", address: "Маңғыстау ауданы, Шетпе кенті", lat: 44.17, lng: 52.12, district: "Маңғыстау ауданы" },
-    { name: "Бейнеу №1 мектебі", address: "Бейнеу ауданы, Бейнеу кенті", lat: 45.32, lng: 55.19, district: "Бейнеу ауданы" },
-    { name: "Бейнеу №3 мектебі", address: "Бейнеу ауданы, Бейнеу кенті", lat: 45.324, lng: 55.196, district: "Бейнеу ауданы" },
-  ];
+  const facilities = facilitiesJson.map((f) => ({ ...f, id: randomUUID() }));
+  const inAktau = (kind: FacilityKind) => facilities.filter((f) => f.kind === kind && f.district === "Ақтау қ.");
 
-  const schools = schoolSeeds.map((s) => ({ ...s, id: randomUUID(), isDemo: !!s.isDemo }));
-  const demoSchool = schools.find((s) => s.isDemo)!;
-  const nonDemo = schools.filter((s) => !s.isDemo);
+  // Демо: Ақтаудағы нөмірлі мемлекеттік мектеп. Ортақ партия оған қоса бір балабақша мен
+  // бір қоғамдық асханаға жеткізілген — партияны қадағалау мектептен тыс нысандарды да табады.
+  // Демо-мектеп пен балабақша бір шағын ауданда (13-й м-н) — бір жеткізушінің маршруты.
+  const pick = (kind: FacilityKind, name: string) =>
+    inAktau(kind).find((f) => f.name.startsWith(name)) ?? inAktau(kind)[0];
+  const demo = pick("SCHOOL", "Общеобразовательная средняя школа №17");
+  const tracedKindergarten = pick("KINDERGARTEN", "Айналайын, детский сад №54");
+  const tracedCanteen = pick("CANTEEN", "Береке, столовая");
+  const yellowTemp = pick("CANTEEN", "Асия, столовая");
+  const yellowPhoto = inAktau("KINDERGARTEN").filter((f) => f.rubric === "Детские сады")[3];
+  const yellowRating = facilities.find((f) => f.kind === "SCHOOL" && f.district === "Жаңаөзен қ.")!;
 
-  // Ортақ партияны алатын 2 мектеп (nonDemo[0], nonDemo[1]) демода сарыға көтерілуі керек,
-  // сондықтан олар жасыл басталады. Сары сценарийлер басқа мектептерге беріледі.
-  const scenario = new Map<string, Scenario>(schools.map((s) => [s.id, "green" as Scenario]));
-  scenario.set(demoSchool.id, "demo");
-  scenario.set(nonDemo[5].id, "yellowTemp");
-  scenario.set(nonDemo[8].id, "yellowPhoto");
-  scenario.set(nonDemo[12].id, "yellowRating");
+  const scenario = new Map<string, Scenario>(facilities.map((f) => [f.id, "green" as Scenario]));
+  scenario.set(demo.id, "demo");
+  scenario.set(yellowTemp.id, "yellowTemp");
+  scenario.set(yellowPhoto.id, "yellowPhoto");
+  scenario.set(yellowRating.id, "yellowRating");
 
   const inspectionDates = new Map<string, Date | null>();
-  for (const s of schools) {
-    const sc = scenario.get(s.id)!;
-    inspectionDates.set(s.id, sc === "yellowPhoto" ? null : sc === "green" ? daysAgo(randInt(20, 60)) : daysAgo(200));
+  for (const f of facilities) {
+    const sc = scenario.get(f.id)!;
+    inspectionDates.set(f.id, sc === "yellowPhoto" ? null : sc === "green" ? daysAgo(randInt(20, 60)) : daysAgo(200));
   }
 
-  console.log("Мектептер, жеткізушілер, партиялар...");
-  await prisma.school.createMany({
-    data: schools.map((s) => ({
-      id: s.id,
-      name: s.name,
-      address: s.address,
-      lat: s.lat,
-      lng: s.lng,
-      studentsCount: randInt(300, 1200),
-      districtId: districtIds.get(s.district)!,
-      isDemo: s.isDemo,
-      parentToken: randomUUID(),
-      lastInspectionAt: inspectionDates.get(s.id),
-    })),
-  });
+  console.log("Нысандар, жеткізушілер, партиялар...");
+  await insertChunked("нысандар", facilities, (chunk) =>
+    prisma.school.createMany({
+      data: chunk.map((f) => ({
+        id: f.id,
+        kind: f.kind,
+        dgisId: f.dgisId,
+        rubric: f.rubric,
+        name: f.name,
+        address: f.address,
+        lat: f.lat,
+        lng: f.lng,
+        studentsCount: randInt(...PEOPLE[f.kind]),
+        districtId: districtIds.get(f.district)!,
+        isDemo: f.id === demo.id,
+        parentToken: randomUUID(),
+        lastInspectionAt: inspectionDates.get(f.id),
+      })),
+    }),
+  );
 
   const suppliers = [
     { name: 'ЖШС "Маңғыстау Азық-Түлік"', bin: "010140012345", certDays: 400 },
@@ -140,7 +161,7 @@ async function main() {
   await prisma.supplier.createMany({ data: suppliers });
 
   const products = ["Сиыр еті котлеті", "Тауық еті", "Картоп", "Сүт", "Нан", "Күріш", "Жұмыртқа", "Пияз"];
-  const batches = Array.from({ length: 25 }, (_, i) => {
+  const batches = Array.from({ length: 40 }, (_, i) => {
     const producedAt = daysAgo(randInt(1, 20));
     const expiresAt = new Date(producedAt);
     expiresAt.setDate(expiresAt.getDate() + randInt(5, 30));
@@ -155,32 +176,33 @@ async function main() {
   });
   await prisma.batch.createMany({ data: batches });
 
-  // Демо-мектептің бүгінгі котлета партиясы (B-2000) тағы 2 мектепке жеткізілген — партияны қадағалау демосы.
+  // Ортақ котлета партиясы (B-2000) бүгін демо-мектепке, балабақшаға және асханаға жеткізілген.
   const sharedBatch = batches[0];
-  const deliveries: Prisma.DeliveryCreateManyInput[] = [demoSchool, nonDemo[0], nonDemo[1]].map((s) => ({
+  const deliveries: Prisma.DeliveryCreateManyInput[] = [demo, tracedKindergarten, tracedCanteen].map((f) => ({
     batchId: sharedBatch.id,
-    schoolId: s.id,
+    schoolId: f.id,
     deliveredAt: daysAgo(0),
   }));
-  for (const s of schools) {
-    const count = randInt(3, 6);
+  for (const f of facilities) {
+    const count = randInt(2, 4);
     for (let i = 0; i < count; i++) {
-      deliveries.push({ batchId: batches[randInt(1, batches.length - 1)].id, schoolId: s.id, deliveredAt: daysAgo(randInt(1, 13)) });
+      deliveries.push({ batchId: batches[randInt(1, batches.length - 1)].id, schoolId: f.id, deliveredAt: daysAgo(randInt(1, 13)) });
     }
   }
-  await prisma.delivery.createMany({ data: deliveries });
+  await insertChunked("жеткізулер", deliveries, (c) => prisma.delivery.createMany({ data: c }));
 
-  console.log("30 күндік тарих...");
-  const menuNames = ["Көже", "Ет тұшпара", "Палау", "Балық котлеті", "Макарон бефстроганов", "Сорпа"];
+  console.log("Асхана журналы мен бағалар...");
   const menuItems: Prisma.MenuItemCreateManyInput[] = [];
   const logs: Prisma.KitchenLogCreateManyInput[] = [];
   const feedback: Prisma.ParentFeedbackCreateManyInput[] = [];
 
-  for (const school of schools) {
-    const sc = scenario.get(school.id)!;
+  for (const f of facilities) {
+    const sc = scenario.get(f.id)!;
+    const menuNames = MENU[f.kind];
+    const days = sc === "green" ? HISTORY_DAYS.green : HISTORY_DAYS.scenario;
     let tempViolationsLeft = { yellowTemp: 99, yellowPhoto: 4, yellowRating: 2, demo: 2, green: 0 }[sc];
 
-    for (let day = 29; day >= 0; day--) {
+    for (let day = days - 1; day >= 0; day--) {
       // Демо-мектептің бүгінгі мәзірін демо «1-қадам» өзі жасайды.
       if (sc === "demo" && day === 0) continue;
       const date = daysAgo(day);
@@ -190,7 +212,7 @@ async function main() {
         const menuItemId = randomUUID();
         menuItems.push({
           id: menuItemId,
-          schoolId: school.id,
+          schoolId: f.id,
           date,
           name: menuNames[randInt(0, menuNames.length - 1)],
           standardPortionG: randInt(150, 300),
@@ -199,55 +221,63 @@ async function main() {
 
         const skipPhoto = (sc === "yellowPhoto" && day < 5) || (sc === "demo" && day === 1);
         if (!skipPhoto) {
-          logs.push({ schoolId: school.id, menuItemId, type: "PHOTO", photoUrl: "https://placehold.co/400x300?text=Portion", createdAt: date, createdById: "seed" });
+          logs.push({ schoolId: f.id, menuItemId, type: "PHOTO", photoUrl: "https://placehold.co/400x300?text=Portion", createdAt: date, createdById: "seed" });
         }
 
         const violate =
           day < 14 && tempViolationsLeft > 0 && (sc === "yellowTemp" ? day % 2 === 0 : ix === 0 && day % 3 === 0);
         if (violate) tempViolationsLeft -= 1;
         const fridge = violate ? Number(rand(8, 11).toFixed(1)) : Number(rand(2.5, 5.5).toFixed(1));
-        logs.push({ schoolId: school.id, menuItemId, type: "FRIDGE_TEMP", valueC: fridge, isViolation: violate, createdAt: date, createdById: "seed" });
+        logs.push({ schoolId: f.id, menuItemId, type: "FRIDGE_TEMP", valueC: fridge, isViolation: violate, createdAt: date, createdById: "seed" });
         const hot = Number(rand(68, 82).toFixed(1));
-        logs.push({ schoolId: school.id, menuItemId, type: "HOT_TEMP", valueC: hot, isViolation: false, createdAt: date, createdById: "seed" });
+        logs.push({ schoolId: f.id, menuItemId, type: "HOT_TEMP", valueC: hot, isViolation: false, createdAt: date, createdById: "seed" });
       }
 
       if (sc === "yellowRating" && day < 14) {
         // Төмен бағалар + соңғы 3 күнде шағымдар жарылысы.
         const count = day < 3 ? 3 : 1;
         for (let k = 0; k < count; k++) {
-          feedback.push({ schoolId: school.id, rating: randInt(1, 2), comment: "Тағам суық, порция аз", createdAt: date });
+          feedback.push({ schoolId: f.id, rating: randInt(1, 2), comment: "Тағам суық, порция аз", createdAt: date });
         }
       } else if (day % 3 === 0) {
         const rating = sc === "yellowTemp" ? 3 : sc === "demo" ? randInt(3, 4) : randInt(4, 5);
-        feedback.push({ schoolId: school.id, rating, comment: null, createdAt: date });
+        feedback.push({ schoolId: f.id, rating, comment: null, createdAt: date });
       }
     }
   }
 
   await insertChunked("мәзір", menuItems, (c) => prisma.menuItem.createMany({ data: c }));
   await insertChunked("асхана журналы", logs, (c) => prisma.kitchenLog.createMany({ data: c }));
-  await insertChunked("ата-ана бағалары", feedback, (c) => prisma.parentFeedback.createMany({ data: c }));
+  await insertChunked("бағалар", feedback, (c) => prisma.parentFeedback.createMany({ data: c }));
 
-  await prisma.inspection.createMany({
-    data: schools
-      .filter((s) => inspectionDates.get(s.id))
-      .map((s) => {
-        const at = inspectionDates.get(s.id)!;
-        return { schoolId: s.id, inspectorId: "seed", type: "MONITORING" as const, plannedAt: at, doneAt: at, result: "Бұзушылық анықталмады" };
+  await insertChunked(
+    "тексерулер",
+    facilities.filter((f) => inspectionDates.get(f.id)),
+    (chunk) =>
+      prisma.inspection.createMany({
+        data: chunk.map((f) => {
+          const at = inspectionDates.get(f.id)!;
+          return { schoolId: f.id, inspectorId: "seed", type: "MONITORING" as const, plannedAt: at, doneAt: at, result: "Бұзушылық анықталмады" };
+        }),
       }),
-  });
+  );
 
-  console.log("Тәуекел тарихы (өткен 29 күн)...");
+  console.log("Тәуекел тарихы...");
   const snapshots: Prisma.RiskSnapshotCreateManyInput[] = [];
   const target: Record<Scenario, number> = { green: 5, demo: 30, yellowTemp: 43, yellowPhoto: 45, yellowRating: 45 };
-  for (const s of schools) {
-    const end = target[scenario.get(s.id)!];
+  const zeroComponents = { tempViolations: 0, missingPhotos: 0, parentRating: 0, complaintSpike: 0, supplierRisk: 0, inspectionAge: 0, overduePrescriptions: 0 };
+  for (const f of facilities) {
+    const sc = scenario.get(f.id)!;
+    const end = target[sc];
     for (let day = 29; day >= 1; day--) {
       const trend = end === 5 ? 5 : 8 + ((29 - day) / 29) * (end - 8);
       const score = Math.max(0, Math.min(100, Math.round(trend + rand(-4, 4))));
       const level: RiskLevel = score >= 70 ? "RED" : score >= 40 ? "YELLOW" : "GREEN";
-      snapshots.push({ schoolId: s.id, score, level, components: { seed: true }, computedAt: daysAgo(day) });
+      snapshots.push({ schoolId: f.id, score, level, components: { seed: true }, computedAt: daysAgo(day) });
     }
+    // Жасыл нысандардың бүгінгі балы деректерден анық 0 — нақты есептеуді тек сценарийлерге жүргіземіз
+    // (әр есептеу ДБ-ға ~7 сұраныс жасайды, 500+ нысан үшін бұл жергілікті ортада сағатқа созылады).
+    if (sc === "green") snapshots.push({ schoolId: f.id, score: 0, level: "GREEN", components: zeroComponents });
   }
   await insertChunked("тәуекел снапшоттары", snapshots, (c) => prisma.riskSnapshot.createMany({ data: c }));
 
@@ -255,22 +285,21 @@ async function main() {
   const passwordHash = await bcrypt.hash("demo123", 10);
   await prisma.user.createMany({
     data: [
-      { login: "kitchen_demo", passwordHash, name: "Асхана қызметкері (демо)", role: "KITCHEN", schoolId: demoSchool.id },
-      { login: "nurse_demo", passwordHash, name: "Медбике (демо)", role: "NURSE", schoolId: demoSchool.id },
+      { login: "kitchen_demo", passwordHash, name: "Асхана қызметкері (демо)", role: "KITCHEN", schoolId: demo.id },
+      { login: "nurse_demo", passwordHash, name: "Медбике (демо)", role: "NURSE", schoolId: demo.id },
       { login: "ses1", passwordHash, name: "СЭС инспекторы", role: "SES", schoolId: null },
       { login: "edu1", passwordHash, name: "Білім басқармасы қызметкері", role: "EDU", schoolId: null },
       { login: "admin", passwordHash, name: "Әкімші", role: "ADMIN", schoolId: null },
     ],
   });
 
-  // Бүгінгі балды нақты тәуекел логикасы есептейді (cron есептейтінмен бірдей болуы үшін).
-  console.log("Бүгінгі тәуекелді есептеу...");
-  for (const s of schools) {
-    const { score, level } = await recomputeSchoolRisk(s.id);
-    console.log(`  ${s.name}: ${score} ${level}`);
+  console.log("Сценарий нысандарының бүгінгі тәуекелі (нақты логикамен)...");
+  for (const f of [demo, tracedKindergarten, tracedCanteen, yellowTemp, yellowPhoto, yellowRating]) {
+    const { score, level } = await recomputeSchoolRisk(f.id);
+    console.log(`  [${scenario.get(f.id)}] ${f.name}: ${score} ${level}`);
   }
 
-  console.log("Дайын. Демо-мектеп:", demoSchool.name);
+  console.log("Дайын. Демо-мектеп:", demo.name);
 }
 
 main()

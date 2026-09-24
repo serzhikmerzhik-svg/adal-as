@@ -12,6 +12,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 type School = {
   id: string;
   name: string;
+  kind: "SCHOOL" | "KINDERGARTEN" | "CANTEEN";
   lat: number;
   lng: number;
   riskScore: number;
@@ -25,18 +26,29 @@ type Alert = {
   reason: string;
   status: string;
   createdAt: string;
-  school: { name: string };
+  school: { name: string; kind: School["kind"] };
 };
+
+// Білім басқармасы тек білім беру ұйымдарын көреді (қоғамдық асханалар — СЭС құзыреті).
+const isEducation = (kind: School["kind"]) => kind !== "CANTEEN";
 
 export default function EduPage() {
   const { data } = useSWR("/api/ses/overview", fetcher, { refreshInterval: 5000 });
 
   if (!data) return <div className="p-6 text-center text-slate-500">Жүктелуде...</div>;
 
-  const { schools, alerts, kpi } = data;
+  const schools = (data.schools as School[]).filter((s) => isEducation(s.kind));
+  const alerts = (data.alerts as Alert[]).filter((a) => isEducation(a.school.kind));
+  const kpi = {
+    green: schools.filter((s) => s.riskLevel === "GREEN").length,
+    yellow: schools.filter((s) => s.riskLevel === "YELLOW").length,
+    red: schools.filter((s) => s.riskLevel === "RED").length,
+    openAlerts: alerts.filter((a) => a.status !== "CLOSED").length,
+    overduePrescriptions: data.kpi.overduePrescriptions as number,
+  };
 
   const byDistrict = new Map<string, { name: string; green: number; yellow: number; red: number }>();
-  for (const s of schools as School[]) {
+  for (const s of schools) {
     const entry = byDistrict.get(s.district.id) ?? { name: s.district.name, green: 0, yellow: 0, red: 0 };
     if (s.riskLevel === "GREEN") entry.green += 1;
     else if (s.riskLevel === "YELLOW") entry.yellow += 1;
