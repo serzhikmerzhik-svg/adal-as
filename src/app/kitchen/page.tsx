@@ -158,7 +158,7 @@ export default function KitchenPage() {
                   Мерзімі: {fullDate(p.dueAt)} · Статус: {PRESCRIPTION_STATUS_LABEL[p.status] ?? p.status}
                 </p>
                 {p.status === "OPEN" && (
-                  <label className="inline-block w-full text-center bg-warn-600 text-white font-semibold rounded-lg py-2 active:opacity-80">
+                  <label className="btn w-full bg-warn-600 text-white border border-warn-600">
                     {busyId === p.id ? "Жүктелуде..." : "Орындалды (фото-дәлел)"}
                     <input
                       type="file"
@@ -180,13 +180,13 @@ export default function KitchenPage() {
         <section className="flex gap-2">
           <button
             onClick={() => setShowMenuForm((v) => !v)}
-            className="flex-1 bg-navy-700 text-white font-semibold rounded-xl py-3 text-sm"
+            className="btn btn-primary flex-1 py-3"
           >
             + Мәзірге тағам қосу
           </button>
           <button
             onClick={() => setShowBatchForm((v) => !v)}
-            className="flex-1 bg-navy-600 text-white font-semibold rounded-xl py-3 text-sm"
+            className="btn btn-outline flex-1 py-3"
           >
             + Партия қабылдау
           </button>
@@ -199,7 +199,7 @@ export default function KitchenPage() {
           >
             <input name="name" required placeholder="Тағам атауы" className="field" />
             <input name="portion" type="number" placeholder="Порция (г)" className="field" />
-            <button type="submit" className="w-full bg-navy-700 text-white rounded-lg py-2 font-semibold">
+            <button type="submit" className="btn btn-primary w-full">
               Қосу
             </button>
           </form>
@@ -230,7 +230,7 @@ export default function KitchenPage() {
                 <input name="expiresAt" type="date" required className="field" />
               </div>
             </div>
-            <button type="submit" className="w-full bg-navy-600 text-white rounded-lg py-2 font-semibold">
+            <button type="submit" className="btn btn-primary w-full">
               Қабылдау
             </button>
           </form>
@@ -271,7 +271,7 @@ export default function KitchenPage() {
                   )}
                 </div>
 
-                <label className="block w-full text-center bg-navy-700 text-white font-semibold rounded-lg py-2.5 active:opacity-80">
+                <label className="btn btn-primary w-full py-2.5">
                   {busyId === item.id ? "Жүктелуде..." : lastPhoto ? "Фотоны жаңарту" : "Порция фотосы"}
                   <input
                     type="file"
@@ -298,7 +298,7 @@ export default function KitchenPage() {
                       <button
                         onClick={() => handleTemp(item.id, "FRIDGE_TEMP")}
                         disabled={busyId === fridgeKey}
-                        className="bg-navy-700 text-white rounded-lg px-3 text-sm font-semibold"
+                        className="btn btn-primary btn-sm"
                       >
                         ОК
                       </button>
@@ -316,7 +316,7 @@ export default function KitchenPage() {
                       <button
                         onClick={() => handleTemp(item.id, "HOT_TEMP")}
                         disabled={busyId === hotKey}
-                        className="bg-navy-700 text-white rounded-lg px-3 text-sm font-semibold"
+                        className="btn btn-primary btn-sm"
                       >
                         ОК
                       </button>

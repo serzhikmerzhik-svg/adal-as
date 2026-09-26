@@ -96,7 +96,7 @@ export default function ParentPage({ params }: { params: Promise<{ token: string
               <button
                 onClick={submitFeedback}
                 disabled={rating === 0}
-                className="w-full bg-navy-700 text-white font-semibold rounded-lg py-2.5 disabled:opacity-50"
+                className="btn btn-primary w-full py-2.5"
               >
                 Жіберу
               </button>

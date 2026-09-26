@@ -36,7 +36,7 @@ export default function DemoPage() {
         <button
           onClick={() => run("step1", "1-қадам: асхана журналы")}
           disabled={busy !== null}
-          className="w-full bg-navy-700 text-white font-semibold rounded-xl py-3.5 disabled:opacity-60"
+          className="btn btn-primary w-full py-3.5"
         >
           1-қадам: Асхана журналын толтыру
         </button>
@@ -44,7 +44,7 @@ export default function DemoPage() {
         <button
           onClick={() => run("step2", "2-қадам: 4 оқушыда белгілер")}
           disabled={busy !== null}
-          className="w-full bg-bad-600 text-white font-semibold rounded-xl py-3.5 disabled:opacity-60"
+          className="btn w-full py-3.5 bg-bad-600 text-white border border-bad-600 hover:bg-bad-700"
         >
           2-қадам: 4 оқушыда белгілер тіркеу (қызыл дабыл)
         </button>
@@ -52,7 +52,7 @@ export default function DemoPage() {
         <button
           onClick={() => run("reset", "Демоны қалпына келтіру")}
           disabled={busy !== null}
-          className="w-full bg-navy-600 text-white font-semibold rounded-xl py-3.5 disabled:opacity-60"
+          className="btn btn-outline w-full py-3.5"
         >
           Демоны қалпына келтіру
         </button>

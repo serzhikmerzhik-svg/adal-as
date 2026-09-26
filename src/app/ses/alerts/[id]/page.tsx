@@ -52,11 +52,11 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
           {alert.status !== "CLOSED" && (
             <div className="flex gap-2 mt-3">
               {alert.status === "OPEN" && (
-                <button onClick={() => act("acknowledge")} className="bg-navy-700 text-white rounded-lg px-4 py-2 text-sm font-semibold">
+                <button onClick={() => act("acknowledge")} className="btn btn-outline">
                   Қабылдадым
                 </button>
               )}
-              <button onClick={() => act("close")} className="bg-navy-700 text-white rounded-lg px-4 py-2 text-sm font-semibold">
+              <button onClick={() => act("close")} className="btn btn-primary">
                 Жабу
               </button>
             </div>
@@ -90,7 +90,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
                 {m.batch && !m.batch.supplier.blocked && (
                   <button
                     onClick={() => blockSupplier(m.batch!.supplier.id)}
-                    className="text-xs bg-bad-600 text-white rounded-lg px-3 py-1.5 shrink-0"
+                    className="btn btn-danger btn-sm shrink-0"
                   >
                     Жеткізушіні бұғаттау
                   </button>

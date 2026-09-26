@@ -92,7 +92,7 @@ export default function NursePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-bad-600 text-white font-bold rounded-xl py-3.5 text-base disabled:opacity-60"
+            className="btn w-full py-3.5 bg-bad-600 text-white border border-bad-600 hover:bg-bad-700 text-base"
           >
             {submitting ? "Тіркелуде..." : "Тіркеу"}
           </button>

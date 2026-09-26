@@ -147,7 +147,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
               onChange={(e) => setInspectionForm((s) => ({ ...s, plannedAt: e.target.value }))}
               className="field"
             />
-            <button className="w-full bg-navy-700 text-white rounded-lg py-2 font-semibold">Тағайындау</button>
+            <button className="btn btn-primary w-full">Тағайындау</button>
           </form>
 
           <form onSubmit={submitPrescription} className="card p-4 space-y-3">
@@ -167,7 +167,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
               onChange={(e) => setPrescriptionForm((s) => ({ ...s, dueAt: e.target.value }))}
               className="field"
             />
-            <button className="w-full bg-warn-600 text-white rounded-lg py-2 font-semibold">Беру</button>
+            <button className="btn btn-primary w-full">Беру</button>
           </form>
         </section>
 
@@ -182,8 +182,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
               </div>
               {p.status === "SUBMITTED" && (
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => decidePrescription(p.id, "accept")} className="text-xs bg-navy-700 text-white rounded-lg px-3 py-1.5">Қабылдау</button>
-                  <button onClick={() => decidePrescription(p.id, "reject")} className="text-xs bg-bad-600 text-white rounded-lg px-3 py-1.5">Қайтару</button>
+                  <button onClick={() => decidePrescription(p.id, "accept")} className="btn btn-primary btn-sm">Қабылдау</button>
+                  <button onClick={() => decidePrescription(p.id, "reject")} className="btn btn-danger btn-sm">Қайтару</button>
                 </div>
               )}
             </div>
