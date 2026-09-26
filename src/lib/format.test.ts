@@ -15,11 +15,12 @@ test("shortName: балабақша, асхана және нөмірсіз ме
   assert.equal(shortName("Білім Әлемі, школа-лицей", "SCHOOL"), "Білім Әлемі");
 });
 
-test("shortName: кодталған нысандар", () => {
-  assert.equal(shortName("Мектеп асханасы А-12", "SCHOOL"), "А-12");
-  assert.equal(shortName("Мейрамхана М-07", "RESTAURANT"), "М-07");
-  assert.equal(shortName("Қоғамдық асхана Ас-03", "CANTEEN"), "Ас-03");
-  assert.equal(shortName("Балабақша Б-11", "KINDERGARTEN"), "Б-11");
+test("shortName: seed атаулары", () => {
+  assert.equal(shortName("№52 жалпы білім беретін мектеп", "SCHOOL"), "№52 мектеп");
+  assert.equal(shortName("№44 мектеп-гимназия", "SCHOOL"), "№44 гимназия");
+  assert.equal(shortName("Ақ желкен, мейрамхана", "RESTAURANT"), "«Ақ желкен»");
+  assert.equal(shortName("Тұмар, кафе", "CAFE"), "«Тұмар»");
+  assert.equal(shortName("Шұғыла, балабақша", "KINDERGARTEN"), "«Шұғыла»");
 });
 
 test("microdistrict: 2GIS мекенжай пішімдері", () => {

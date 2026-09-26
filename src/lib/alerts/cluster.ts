@@ -4,6 +4,7 @@ import { findSchoolsForBatches } from "@/lib/trace/batchTrace";
 import { recomputeSchoolRisk } from "@/lib/risk/score";
 import type { Symptom } from "@prisma/client";
 import { todayDate } from "@/lib/date";
+import { shortName } from "@/lib/format";
 
 function minutesAgo(n: number) {
   const d = new Date();
@@ -64,7 +65,7 @@ export async function checkClusterAndAlert(schoolId: string) {
 
   const affectedSchoolIds = [schoolId];
   const [sourceSchool, otherSchools] = await Promise.all([
-    prisma.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true, code: true } }),
+    prisma.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true, kind: true } }),
     batchIds.length > 0 ? findSchoolsForBatches(batchIds, schoolId) : Promise.resolve([]),
     todaysMenu.length > 0
       ? prisma.menuItem.updateMany({ where: { id: { in: todaysMenu.map((m) => m.id) } }, data: { blocked: true } })
@@ -78,7 +79,7 @@ export async function checkClusterAndAlert(schoolId: string) {
         matched.map((batchId) => ({
           schoolId: school.id,
           level: "YELLOW" as const,
-          reason: `Партия №${batchCodes.get(batchId)}: ${sourceSchool.code ?? `«${sourceSchool.name}»`} нысанында улану кластері анықталды`,
+          reason: `Партия №${batchCodes.get(batchId)}: ${shortName(sourceSchool.name, sourceSchool.kind)} нысанында улану кластері анықталды`,
           relatedBatchId: batchId,
           details: { sourceSchoolId: schoolId, sourceAlertId: alert.id, batchCode: batchCodes.get(batchId) ?? null },
         })),

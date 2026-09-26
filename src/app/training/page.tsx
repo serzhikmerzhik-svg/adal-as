@@ -2,27 +2,35 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
+import { fetcher } from "@/components/ses/types";
 
 type Step = "step1" | "step2" | "reset";
+type Info = { school: string; batch: { code: string; product: string } | null; recipients: string[] };
 
-const STEPS: { id: Exclude<Step, "reset">; title: string; text: string; tone: "primary" | "danger" }[] = [
-  {
-    id: "step1",
-    title: "1. А-12 асханасы күнделікті журналды толтырады",
-    text: "Бүгінгі мәзір, порция фотосы және тоңазытқыш пен ыстық тағам температурасы. К-2417 ет партиясы мәзірге байланады.",
-    tone: "primary",
-  },
-  {
-    id: "step2",
-    title: "2. Медбике 4 оқушыда ішек-қарын белгілерін тіркейді",
-    text: "10 минут ішінде 4 тіркеу — кластер. Жүйе қызыл дабыл береді, мәзірді бұғаттайды, К-2417 партиясын алған А-05, А-19, М-07 нысандарын сарыға көтереді.",
-    tone: "danger",
-  },
-];
+function steps(info?: Info): { id: Exclude<Step, "reset">; title: string; text: string; tone: "primary" | "danger" }[] {
+  const school = info?.school ?? "Мектеп";
+  const batch = info?.batch ? `${info.batch.code} партиясы (${info.batch.product.toLowerCase()})` : "Бүгінгі партия";
+  const recipients = info?.recipients.length ? info.recipients.join(", ") : "басқа нысандар";
+  return [
+    {
+      id: "step1",
+      title: `1. ${school} асханасы күнделікті журналды толтырады`,
+      text: `Бүгінгі мәзір, порция фотосы және тоңазытқыш пен ыстық тағам температурасы. ${batch} мәзірге байланады.`,
+      tone: "primary",
+    },
+    {
+      id: "step2",
+      title: "2. Медбике 4 оқушыда ішек-қарын белгілерін тіркейді",
+      text: `10 минут ішінде 4 тіркеу — кластер. Жүйе қызыл дабыл береді, мәзірді бұғаттайды, сол партияны алған ${recipients} нысандарын сарыға көтереді.`,
+      tone: "danger",
+    },
+  ];
+}
 
-function describe(step: Step, data: Record<string, unknown>) {
-  if (step === "step1") return `Мәзір толтырылды · А-12 деңгейі: ${data.riskLevel === "GREEN" ? "жасыл" : String(data.riskLevel)}`;
+function describe(step: Step, data: Record<string, unknown>, school: string) {
+  if (step === "step1") return `Мәзір толтырылды · ${school} деңгейі: ${data.riskLevel === "GREEN" ? "жасыл" : String(data.riskLevel)}`;
   if (step === "step2") {
     if (!data.alertCreated) return "Кластер бұрыннан тіркелген: жаңа дабыл жоқ";
     const traced = (data.traced as string[] | undefined) ?? [];
@@ -36,6 +44,7 @@ export default function TrainingPage() {
   const [log, setLog] = useState<{ ok: boolean; text: string; at: string }[]>([]);
   const [busy, setBusy] = useState<Step | null>(null);
   const [alertId, setAlertId] = useState<string | null>(null);
+  const { data: info } = useSWR<Info>("/api/training", fetcher);
 
   async function run(step: Step) {
     setBusy(step);
@@ -49,7 +58,7 @@ export default function TrainingPage() {
       }
       if (step === "step2" && data.alertId) setAlertId(data.alertId);
       if (step === "reset") setAlertId(null);
-      setLog((l) => [{ ok: true, text: describe(step, data), at }, ...l]);
+      setLog((l) => [{ ok: true, text: describe(step, data, info?.school ?? "Нысан"), at }, ...l]);
     } finally {
       setBusy(null);
     }
@@ -68,7 +77,7 @@ export default function TrainingPage() {
           </p>
         </section>
 
-        {STEPS.map((s) => (
+        {steps(info).map((s) => (
           <section key={s.id} className="card p-5 space-y-3">
             <div>
               <h2 className="font-semibold text-ink">{s.title}</h2>

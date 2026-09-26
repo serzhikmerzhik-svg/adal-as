@@ -132,7 +132,6 @@ export function MapCard({
       <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
         <span className="flex items-center gap-1.5"><KindShape kind="SCHOOL" /> білім беру</span>
         <span className="flex items-center gap-1.5"><KindShape kind="CAFE" /> қоғамдық тамақтану</span>
-        <span>· атаулар кодталған, орны шағын аудан деңгейінде</span>
         <span className="ml-auto">Орналасуы: 2GIS</span>
       </p>
     </section>

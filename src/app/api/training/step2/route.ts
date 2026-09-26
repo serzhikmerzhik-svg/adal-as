@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getTrainingSchool } from "@/lib/training";
 import { checkClusterAndAlert } from "@/lib/alerts/cluster";
+import { shortName } from "@/lib/format";
 
 // 2-қадам: 10 минут ішінде 4 оқушыда ішек-қарын белгілері тіркеледі — қызыл дабыл іске қосылады.
 export async function POST() {
@@ -26,13 +27,13 @@ export async function POST() {
   const traced = alert
     ? await prisma.alert.findMany({
         where: { level: "YELLOW", details: { path: ["sourceAlertId"], equals: alert.id } },
-        select: { school: { select: { code: true, name: true } } },
+        select: { school: { select: { name: true, kind: true } } },
       })
     : [];
 
   return NextResponse.json({
     alertCreated: !!alert,
     alertId: alert?.id ?? null,
-    traced: traced.map((t) => t.school.code ?? t.school.name),
+    traced: traced.map((t) => shortName(t.school.name, t.school.kind)),
   });
 }

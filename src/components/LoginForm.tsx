@@ -3,12 +3,12 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Сынақ аккаунттары (prisma/seed.ts). Құпиясөз бандлда сақталмайды: ол SEED_PASSWORD арқылы
+// Жылдам кіру аккаунттары (prisma/seed.ts). Құпиясөз бандлда сақталмайды: ол SEED_PASSWORD арқылы
 // орнатылады және қолмен енгізіледі.
 const TEST_ACCOUNTS = [
-  { login: "a12_kitchen", label: "А-12 асханасы" },
-  { login: "a12_nurse", label: "А-12 медбикесі" },
-  { login: "m07_kitchen", label: "М-07 мейрамханасы" },
+  { login: "a12_kitchen", label: "Мектеп асханасы" },
+  { login: "a12_nurse", label: "Мектеп медбикесі" },
+  { login: "m07_kitchen", label: "Мейрамхана асханасы" },
   { login: "ses1", label: "СЭС инспекторы" },
   { login: "edu1", label: "Білім бөлімі" },
   { login: "admin", label: "Оқу-жаттығу режимі" },
@@ -94,7 +94,7 @@ export function LoginForm({ initialLogin }: { initialLogin?: string }) {
       </form>
 
       <div className="anim-fade-up card p-5 space-y-3" style={{ animationDelay: "120ms" }}>
-        <p className="text-sm font-medium text-ink">Сынақ аккаунттары</p>
+        <p className="text-sm font-medium text-ink">Жылдам кіру</p>
         <div className="grid grid-cols-2 gap-2">
           {TEST_ACCOUNTS.map((a) => (
             <button
@@ -110,7 +110,7 @@ export function LoginForm({ initialLogin }: { initialLogin?: string }) {
             </button>
           ))}
         </div>
-        <p className="text-xs text-muted">Аккаунтты таңдап, құпиясөзді енгізіңіз. Құпиясөзді жоба командасы береді.</p>
+        <p className="text-xs text-muted">Рөлді таңдап, құпиясөзді енгізіңіз.</p>
       </div>
     </div>
   );

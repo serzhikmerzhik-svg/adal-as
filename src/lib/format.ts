@@ -1,11 +1,7 @@
-// Интерфейсте нысан қысқа атаумен көрсетіледі, толық атау title атрибутында қалады.
-// Кодталған нысан ("Мектеп асханасы А-12") → "А-12"; 2GIS атауы ("Общеобразовательная
-// средняя школа №17") → "№17 мектеп".
-const CODED_NAME = /^(?:Мектеп асханасы|Балабақша|Мейрамхана|Кафе|Қоғамдық асхана)\s+([А-ЯӘҒҚҢӨҰҮҺІа-я]{1,2}-\d{2})$/;
+// Атаулар ұзын ("№52 жалпы білім беретін мектеп", "Ақ желкен, мейрамхана"), ал интерфейсте қысқа
+// түр керек ("№52 мектеп", "«Ақ желкен»"). Толық атау title атрибутында қалады.
 
 export function shortName(name: string, kind: string): string {
-  const coded = name.match(CODED_NAME);
-  if (coded) return coded[1];
   const num = name.match(/№\s*(\d+)/)?.[1];
   const base = name.split(",")[0].trim();
 
@@ -15,7 +11,9 @@ export function shortName(name: string, kind: string): string {
     return `№${num} мектеп`;
   }
   if (kind === "KINDERGARTEN") return num ? `«${base}» №${num}` : `«${base}»`;
-  if (kind === "CANTEEN") return `«${base}»`;
+  if (kind === "CANTEEN" || kind === "RESTAURANT" || kind === "CAFE") {
+    return base.length > 28 ? `«${base.slice(0, 27)}…»` : `«${base}»`;
+  }
   return base.length > 30 ? `${base.slice(0, 29)}…` : base;
 }
 

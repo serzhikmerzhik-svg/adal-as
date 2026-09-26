@@ -14,21 +14,77 @@ const prisma = new PrismaClient();
  * Орналасуы шынайы: нысандар 2GIS-тегі нақты мектептер, балабақшалар, мейрамханалар, кафелер мен
  * асханалар тұрған шағын аудандардан алынады (scripts/fetch-2gis.mjs → prisma/data/facilities.json).
  * Бірақ сценарийдегі бұзушылықтар мен «улану» ойдан шығарылған, сондықтан нақты нысандарды
- * айыптамау үшін атаулары кодпен ауыстырылады (А-12, М-07…), мекенжайы шағын аудан деңгейінде
- * қалады, координаттары ~100 м-ге ығыстырылады.
+ * айыптамау үшін атаулары ойдан шығарылған атаулармен ауыстырылады (fictionalNames), мекенжайы
+ * шағын аудан деңгейінде қалады, координаттары ~100 м-ге ығыстырылады. Ішкі код (А-12, М-07…)
+ * тек сценарий мен аккаунттарды байланыстыру үшін сақталады.
  */
 
 type FacilityJson = { dgisId: string; kind: FacilityKind; name: string; address: string; lat: number; lng: number };
 
 type Scenario = "green" | "greenInspected" | "training" | "yellowTemp" | "yellowPhoto" | "yellowRating" | "yellowOverdue";
 
-const KIND_NAME: Record<FacilityKind, string> = {
-  SCHOOL: "Мектеп асханасы",
-  KINDERGARTEN: "Балабақша",
-  RESTAURANT: "Мейрамхана",
-  CAFE: "Кафе",
-  CANTEEN: "Қоғамдық асхана",
+// Атаулар ойдан шығарылған: сценарийдегі бұзушылықтар да ойдан шығарылған, сондықтан атау нақты
+// нысанға таңылмауы керек. Әр атау 2GIS тізіміндегі 689 нақты атаумен салыстырылып, сәйкес келсе
+// алынып тасталады (fictionalNames). Ақтау мектептерінің нөмірі 1–35, сондықтан мектептерге 41-ден бастап.
+const NAME_POOL: Record<Exclude<FacilityKind, "SCHOOL">, string[]> = {
+  KINDERGARTEN: [
+    "Шұғыла", "Күншуақ", "Жұлдызай", "Құлыншақ", "Таңшолпан", "Еркетай", "Ботақан", "Нұршуақ", "Көгершін", "Гүлдәурен",
+    "Айгөлек", "Сәбижан", "Ақмаржан", "Бүлдіршін", "Балауса", "Қуаныш", "Балдырған", "Қызғалдақ", "Ақбота", "Мөлдір",
+  ],
+  RESTAURANT: [
+    "Ақ желкен", "Теңіз самалы", "Алтын шатыр", "Көкжиек", "Жағалау", "Қазына", "Тарлан", "Әсем кеш", "Ақсарай", "Мерей",
+    "Шаңырақ", "Сазды кеш", "Үлкен дастарқан", "Маржан", "Толқын жағасы",
+  ],
+  CAFE: [
+    "Тұмар", "Қарлығаш", "Жайлау", "Шекер", "Мейіз", "Бауырсақ", "Тәтті", "Көктем", "Самсагүл", "Жент", "Ақжелең",
+    "Сырнай", "Дәмхана", "Бота", "Ләззат", "Шұбат",
+  ],
+  CANTEEN: [
+    "Ырыс", "Сыбаға", "Ынтымақ", "Мереке", "Бірлік", "Құт-Береке", "Жылы ас", "Дәмді ас", "Ақ дастарқан", "Мол дастарқан",
+    "Табыс", "Дастарқан",
+  ],
 };
+const KIND_SUFFIX: Record<Exclude<FacilityKind, "SCHOOL">, string> = {
+  KINDERGARTEN: "балабақша",
+  RESTAURANT: "мейрамхана",
+  CAFE: "кафе",
+  CANTEEN: "асхана",
+};
+const FIRST_SCHOOL_NUMBER = 41;
+
+const KZ_TO_RU: Record<string, string> = { ә: "а", ғ: "г", қ: "к", ң: "н", ө: "о", ұ: "у", ү: "у", һ: "х", і: "и" };
+const normalize = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[әғқңөұүһі]/g, (c) => KZ_TO_RU[c])
+    .replace(/[^a-zа-яё0-9]/g, "");
+
+/** Код → ойдан шығарылған атау. Нақты Ақтау нысандарының атауымен сәйкес келетіндер алынып тасталады. */
+function fictionalNames(real: FacilityJson[]) {
+  const realFull = real.map((f) => normalize(f.name));
+  const realBrands = real.map((f) => normalize(f.name.split(",")[0])).filter((b) => b.length >= 3);
+  const taken = (word: string) => {
+    const w = normalize(word);
+    return realFull.some((r) => r.includes(w)) || realBrands.some((b) => w.includes(b));
+  };
+  const realSchoolNumbers = new Set(
+    real.filter((f) => f.kind === "SCHOOL").flatMap((f) => Array.from(f.name.matchAll(/№\s*(\d+)/g), (m) => Number(m[1]))),
+  );
+
+  const names = new Map<string, string>();
+  let number = FIRST_SCHOOL_NUMBER;
+  CODES.SCHOOL.forEach((code, i) => {
+    while (realSchoolNumbers.has(number)) number++;
+    const type = i % 8 === 3 ? "мектеп-гимназия" : i % 12 === 7 ? "мектеп-лицей" : "жалпы білім беретін мектеп";
+    names.set(code, `№${number++} ${type}`);
+  });
+  for (const kind of Object.keys(NAME_POOL) as (keyof typeof NAME_POOL)[]) {
+    const free = NAME_POOL[kind].filter((w) => !taken(w));
+    if (free.length < CODES[kind].length) throw new Error(`${kind}: бос атау жетпеді (${free.length})`);
+    CODES[kind].forEach((code, i) => names.set(code, `${free[i]}, ${KIND_SUFFIX[kind]}`));
+  }
+  return names;
+}
 
 // Код префиксі мен нөмірлері (CLAUDE.md §10: 24 мектеп, 10 балабақша, 18 мейрамхана/кафе, 8 асхана).
 const CODES: Record<FacilityKind, string[]> = {
@@ -179,8 +235,11 @@ async function main() {
   const password = process.env.SEED_PASSWORD;
   if (!password) throw new Error("SEED_PASSWORD .env ішінде жоқ");
 
-  const facilities = pickEstablishments(JSON.parse(readFileSync(dataFile, "utf8")) as FacilityJson[]).map((f) => ({
+  const real = JSON.parse(readFileSync(dataFile, "utf8")) as FacilityJson[];
+  const names = fictionalNames(real);
+  const facilities = pickEstablishments(real).map((f) => ({
     ...f,
+    name: names.get(f.code)!,
     id: randomUUID(),
   }));
   const byCode = new Map(facilities.map((f) => [f.code, f]));
@@ -217,7 +276,7 @@ async function main() {
       id: f.id,
       code: f.code,
       kind: f.kind,
-      name: `${KIND_NAME[f.kind]} ${f.code}`,
+      name: f.name,
       address: `Ақтау, ${f.mkr}-мкр`,
       lat: f.lat,
       lng: f.lng,
@@ -373,9 +432,9 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.user.createMany({
     data: [
-      { login: "a12_kitchen", passwordHash, name: "А-12 ас үйі", role: "KITCHEN", schoolId: byCode.get("А-12")!.id },
-      { login: "a12_nurse", passwordHash, name: "А-12 медбикесі", role: "NURSE", schoolId: byCode.get("А-12")!.id },
-      { login: "m07_kitchen", passwordHash, name: "М-07 ас үйі", role: "KITCHEN", schoolId: byCode.get("М-07")!.id },
+      { login: "a12_kitchen", passwordHash, name: "Мектеп асханасы", role: "KITCHEN", schoolId: byCode.get("А-12")!.id },
+      { login: "a12_nurse", passwordHash, name: "Мектеп медбикесі", role: "NURSE", schoolId: byCode.get("А-12")!.id },
+      { login: "m07_kitchen", passwordHash, name: "Мейрамхана асханасы", role: "KITCHEN", schoolId: byCode.get("М-07")!.id },
       { login: "ses1", passwordHash, name: "СЭС инспекторы", role: "SES", schoolId: null },
       { login: "edu1", passwordHash, name: "Білім бөлімі", role: "EDU", schoolId: null },
       { login: "admin", passwordHash, name: "Әкімші", role: "ADMIN", schoolId: null },
@@ -389,10 +448,10 @@ async function main() {
   console.log("  деңгейлер:", summary.map((s) => `${s.riskLevel}=${s._count}`).join(" "));
   const scenarioRows = await prisma.school.findMany({
     where: { code: { in: [...Object.keys(FIXED), ...Object.keys(EXTRA_SCENARIO)] } },
-    select: { code: true, address: true, riskScore: true, riskLevel: true },
+    select: { code: true, name: true, address: true, riskScore: true, riskLevel: true },
     orderBy: { code: "asc" },
   });
-  for (const r of scenarioRows) console.log(`  ${r.code} (${r.address}): ${r.riskScore} ${r.riskLevel}`);
+  for (const r of scenarioRows) console.log(`  ${r.code} «${r.name}» (${r.address}): ${r.riskScore} ${r.riskLevel}`);
 }
 
 main()
