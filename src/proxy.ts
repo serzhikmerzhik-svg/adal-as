@@ -13,8 +13,8 @@ const ROUTE_ROLES: { prefix: string; roles: Role[] }[] = [
   { prefix: "/edu", roles: ["EDU"] },
   { prefix: "/api/ses", roles: ["SES", "EDU"] },
   { prefix: "/api/prescriptions", roles: ["KITCHEN", "SES"] },
-  { prefix: "/demo", roles: ["ADMIN", "SES"] },
-  { prefix: "/api/demo", roles: ["ADMIN", "SES"] },
+  { prefix: "/training", roles: ["ADMIN", "SES"] },
+  { prefix: "/api/training", roles: ["ADMIN", "SES"] },
 ];
 
 const PUBLIC_PATHS = ["/login", "/p/"];
@@ -44,5 +44,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/kitchen/:path*", "/nurse/:path*", "/ses/:path*", "/edu/:path*", "/demo/:path*", "/api/:path*"],
+  matcher: ["/kitchen/:path*", "/nurse/:path*", "/ses/:path*", "/edu/:path*", "/training/:path*", "/api/:path*"],
 };

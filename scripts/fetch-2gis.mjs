@@ -1,5 +1,5 @@
-// 2GIS Catalog API-ден Ақтаудың барлық асханаларын, мектептері мен балабақшаларын және
-// облыстың аудан орталықтарындағы мектептерді жүктеп, prisma/data/facilities.json-ға сақтайды.
+// 2GIS Catalog API-ден Ақтау қаласының мектептерін, балабақшаларын, мейрамханаларын, кафелері мен
+// қоғамдық асханаларын жүктеп, prisma/data/facilities.json-ға сақтайды (seed олардың ~60-ын таңдайды).
 // Іске қосу: node --env-file=.env scripts/fetch-2gis.mjs
 //
 // Демо-кілт шектеуі: бір сұранысқа 10 нәтиже × 5 бет = 50. Сондықтан аумақ тіктөртбұрыштарға
@@ -58,23 +58,16 @@ const KINDS = {
   CANTEEN: { query: "столовая", rubric: (r) => r === "Столовые" },
   SCHOOL: { query: "школа", rubric: (r) => ["Школы", "Частные школы", "Гимназии", "Лицеи"].includes(r) },
   KINDERGARTEN: { query: "детский сад", rubric: (r) => ["Детские сады", "Частные детские сады"].includes(r) },
+  RESTAURANT: { query: "ресторан", rubric: (r) => r === "Рестораны" },
+  CAFE: { query: "кафе", rubric: (r) => r === "Кафе" },
 };
 
-// [minLng, minLat, maxLng, maxLat]
+// [minLng, minLat, maxLng, maxLat] — Ақтау қаласы (Мұнайлы ауданының ауылдары adm_div бойынша алынып тасталады).
 const AKTAU = [51.05, 43.56, 51.45, 43.78];
-const DISTRICT_CENTERS = [
-  { district: "Жаңаөзен қ.", bbox: [52.75, 43.28, 52.98, 43.40] },
-  { district: "Бейнеу ауданы", bbox: [55.10, 45.26, 55.28, 45.38] },
-  { district: "Маңғыстау ауданы", bbox: [52.05, 44.12, 52.20, 44.22] },
-  { district: "Түпқараған ауданы", bbox: [50.18, 44.46, 50.34, 44.56] },
-  { district: "Қарақия ауданы", bbox: [51.60, 43.14, 51.74, 43.24] },
-];
 
-function districtFor(item) {
+function inAktauCity(item) {
   const names = (item.adm_div ?? []).map((d) => d.name).join(" ");
-  if (/Мунайл/i.test(names)) return "Мұнайлы ауданы";
-  if (/Актау/i.test(names)) return "Ақтау қ.";
-  return null;
+  return /Актау/i.test(names) && !/Мунайл/i.test(names);
 }
 
 const byId = new Map();
@@ -97,16 +90,9 @@ function add(item, kind, district) {
 for (const [kind, { query }] of Object.entries(KINDS)) {
   const items = await collect(query, AKTAU);
   for (const item of items) {
-    const district = districtFor(item);
-    if (district) add(item, kind, district);
+    if (inAktauCity(item)) add(item, kind, "Ақтау қ.");
   }
   console.log(`Ақтау ${kind}: ${[...byId.values()].filter((f) => f.kind === kind).length}`);
-}
-
-for (const { district, bbox } of DISTRICT_CENTERS) {
-  const items = await collect("школа", bbox);
-  for (const item of items) add(item, "SCHOOL", district);
-  console.log(`${district} SCHOOL: ${[...byId.values()].filter((f) => f.district === district).length}`);
 }
 
 const facilities = [...byId.values()].sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name, "ru"));

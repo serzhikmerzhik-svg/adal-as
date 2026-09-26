@@ -5,7 +5,7 @@ import Link from "next/link";
 import { load } from "@2gis/mapgl";
 import { FACILITY_KIND_LABEL } from "@/lib/risk/labels";
 import { placeLabel, shortName, microdistrict } from "@/lib/format";
-import { AKTAU_VIEW, REGION_VIEW, ZOOM_BUTTON_CLASS, type MapSchool, type SchoolMapProps } from "./shared";
+import { AKTAU_VIEW, ZOOM_BUTTON_CLASS, type MapSchool, type SchoolMapProps } from "./shared";
 
 type MapglApi = Awaited<ReturnType<typeof load>>;
 type MapglMap = InstanceType<MapglApi["Map"]>;
@@ -14,8 +14,8 @@ type MapglHtmlMarker = InstanceType<MapglApi["HtmlMarker"]>;
 const PIN = 16;
 const BUBBLE = 36;
 const FLY = { duration: 900 };
-// Бұдан кіші масштабта жасыл нысандар аудан бойынша бір көпіршікке біріктіріледі:
-// әйтпесе Ақтаудағы 450 нүкте бір дақ болып, теңізге дейін шығып кетеді.
+// Бұдан кіші масштабта жасыл нысандар қала бойынша бір көпіршікке біріктіріледі:
+// әйтпесе алыстан қарағанда нүктелер бір дақ болып, теңізге дейін шығып кетеді.
 const DETAIL_ZOOM = 10;
 
 function boundsOf(points: { lat: number; lng: number }[]) {
@@ -28,8 +28,15 @@ function boundsOf(points: { lat: number; lng: number }[]) {
   };
 }
 
+/** Шағын аудан: 2GIS мекенжайынан ("13-й микрорайон, 51") немесе аудан атауынан ("14-мкр"). */
+function mkrOf(s: MapSchool) {
+  const fromAddress = s.address ? microdistrict(s.address) : null;
+  if (fromAddress) return fromAddress;
+  return s.district?.name.endsWith("-мкр") ? s.district.name : null;
+}
+
 function pinLabel(s: MapSchool) {
-  const mkr = s.address ? microdistrict(s.address) : null;
+  const mkr = mkrOf(s);
   return mkr ? `${shortName(s.name, s.kind)} · ${mkr}` : shortName(s.name, s.kind);
 }
 
@@ -40,7 +47,7 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
   const mapRef = useRef<MapglMap | null>(null);
   const markersRef = useRef<MapglHtmlMarker[]>([]);
   const [ready, setReady] = useState(false);
-  const [detailed, setDetailed] = useState(REGION_VIEW.zoom >= DETAIL_ZOOM);
+  const [detailed, setDetailed] = useState(AKTAU_VIEW.zoom >= DETAIL_ZOOM);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,8 +56,8 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
       if (cancelled || !containerRef.current) return;
       apiRef.current = api;
       const map = new api.Map(containerRef.current, {
-        center: [REGION_VIEW.lng, REGION_VIEW.lat],
-        zoom: REGION_VIEW.zoom,
+        center: [AKTAU_VIEW.lng, AKTAU_VIEW.lat],
+        zoom: AKTAU_VIEW.zoom,
         key: apiKey,
         lang: "ru",
       });
@@ -91,7 +98,7 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
     const addPin = (s: MapSchool, withLabel: boolean) => {
       const el = document.createElement("div");
       el.className = `map-pin kind-${s.kind} level-${s.riskLevel}`;
-      el.title = s.name;
+      el.title = `${s.name} · балл ${s.riskScore}`;
       el.setAttribute("role", "button");
       el.setAttribute("aria-label", `${s.name}: ${s.riskScore}`);
       const dot = document.createElement("span");
@@ -119,12 +126,13 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
     if (detailed) {
       current.filter((s) => s.riskLevel === "GREEN").forEach((s) => addPin(s, false));
     } else {
-      const byDistrict = new Map<string, MapSchool[]>();
+      // Мекенжайдың бірінші бөлігі — қала ("Ақтау, 14-мкр" → "Ақтау").
+      const byCity = new Map<string, MapSchool[]>();
       for (const s of current) {
-        const key = s.district?.name ?? "—";
-        byDistrict.set(key, [...(byDistrict.get(key) ?? []), s]);
+        const key = s.address?.split(",")[0].trim() || s.district?.name || "—";
+        byCity.set(key, [...(byCity.get(key) ?? []), s]);
       }
-      for (const [district, items] of byDistrict) {
+      for (const [district, items] of byCity) {
         const el = document.createElement("div");
         el.className = "map-bubble";
         el.textContent = String(items.length);
@@ -172,9 +180,6 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
           <button type="button" className={ZOOM_BUTTON_CLASS} onClick={() => flyTo(AKTAU_VIEW)}>
             Ақтау
           </button>
-          <button type="button" className={`${ZOOM_BUTTON_CLASS} border-l-0`} onClick={() => flyTo(REGION_VIEW)}>
-            Облыс
-          </button>
         </div>
       )}
 
@@ -188,13 +193,13 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
           >
             ×
           </button>
-          <p className="font-semibold text-sm text-ink">{selected.name}</p>
+          <p className="font-semibold text-sm text-ink" title={selected.name}>{shortName(selected.name, selected.kind)}</p>
           <p className="text-xs text-muted mt-0.5">
             {FACILITY_KIND_LABEL[selected.kind]}
             {selected.district && ` · ${placeLabel(selected.district.name, selected.address)}`} · балл {selected.riskScore}
           </p>
           {basePath && (
-            <Link href={`${basePath}/${selected.id}`} className="text-navy-700 underline text-xs mt-1 inline-block">
+            <Link href={`${basePath}/${selected.id}`} className="text-primary underline text-xs mt-1 inline-block">
               Толық ақпарат
             </Link>
           )}

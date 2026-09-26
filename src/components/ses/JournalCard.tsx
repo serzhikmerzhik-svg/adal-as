@@ -12,7 +12,7 @@ function Progress({ label, value, total }: { label: string; value: number; total
         </span>
       </div>
       <div className="mt-1.5 h-2 rounded-full bg-page overflow-hidden">
-        <div className="h-full rounded-full bg-navy-700 transition-[width] duration-700" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

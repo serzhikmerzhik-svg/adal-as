@@ -87,7 +87,7 @@ export default function NursePage() {
             </div>
           </div>
 
-          {message && <p className="text-sm font-medium text-navy-700">{message}</p>}
+          {message && <p className="text-sm font-medium text-primary">{message}</p>}
 
           <button
             type="submit"

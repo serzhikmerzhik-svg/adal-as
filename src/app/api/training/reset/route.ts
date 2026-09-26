@@ -1,16 +1,16 @@
 import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { getDemoSchool } from "@/lib/demo";
+import { getTrainingSchool } from "@/lib/training";
 import { todayDate, todayRange } from "@/lib/date";
 import { recomputeSchoolRisk } from "@/lib/risk/score";
 import { mapLimit } from "@/lib/concurrency";
 
 export const maxDuration = 60;
 
-// Демо-мектеп пен байланысты партияларды бастапқы күйге қайтарады: бүгінгі алерттер,
+// А-12 мен байланысты партиялардағы нысандарды бастапқы күйге қайтарады: бүгінгі алерттер,
 // нұсқамалар, тексерулер мен тіркеулер өшіріледі, бұғатталған жеткізушілер ашылады.
 export async function POST() {
-  const school = await getDemoSchool();
+  const school = await getTrainingSchool();
   const { start, end } = todayRange();
 
   const redAlerts = await prisma.alert.findMany({
@@ -29,7 +29,7 @@ export async function POST() {
   await prisma.prescription.deleteMany({ where: { schoolId: school.id } });
   await prisma.alert.deleteMany({ where: { id: { in: [...redAlertIds, ...tracedIds] } } });
   await prisma.symptomReport.deleteMany({ where: { schoolId: school.id, reportedAt: { gte: start, lte: end } } });
-  // Демо кезінде тағайындалған, әлі орындалмаған тексерулер (seed тексерулерінде doneAt бар).
+  // Жаттығу кезінде тағайындалған, әлі орындалмаған тексерулер (seed тексерулерінде doneAt бар).
   await prisma.inspection.deleteMany({ where: { doneAt: null, plannedAt: { gte: start } } });
 
   const todaysMenuItems = await prisma.menuItem.findMany({ where: { schoolId: school.id, date: todayDate() } });
@@ -50,7 +50,7 @@ export async function POST() {
     : [];
   await prisma.supplier.updateMany({ where: { blocked: true }, data: { blocked: false } });
 
-  // Демо-мектеп пен партиясы бар нысандар бірден жаңарады, жеткізушінің қалған нысандары — жауаптан кейін.
+  // А-12 мен партиясы бар нысандар бірден жаңарады, жеткізушінің қалған нысандары — жауаптан кейін.
   const immediate = [school.id, ...tracedSchoolIds];
   await Promise.all(immediate.map((id) => recomputeSchoolRisk(id)));
   const rest = supplierSchools.map((d) => d.schoolId).filter((id) => !immediate.includes(id));

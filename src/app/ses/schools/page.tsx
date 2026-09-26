@@ -44,7 +44,7 @@ export default function SchoolsPage() {
 
   return (
     <div className="min-h-screen pb-12">
-      <AppHeader subtitle="Нысандар · Маңғыстау облысы" roleLabel="Инспектор · ДСЭК" sesNav live />
+      <AppHeader subtitle="Нысандар · Ақтау қаласы" roleLabel="Инспектор · СЭС" sesNav live />
       <main className="max-w-[1440px] mx-auto px-4 lg:px-8 py-6 space-y-4">
         <section className="card p-4 flex flex-wrap items-center gap-2">
           <input
@@ -98,7 +98,7 @@ export default function SchoolsPage() {
                   {filtered.slice(0, limit).map((s) => (
                     <tr key={s.id} className="border-b border-line last:border-0 hover:bg-page/60">
                       <td className="py-2.5 pr-3">
-                        <Link href={`/ses/school/${s.id}`} className="font-semibold text-ink hover:text-navy-700" title={s.name}>
+                        <Link href={`/ses/school/${s.id}`} className="font-semibold text-ink hover:text-primary" title={s.name}>
                           {shortName(s.name, s.kind)}
                         </Link>
                       </td>

@@ -8,7 +8,7 @@ import { LogoutButton } from "./LogoutButton";
 import { hms } from "@/lib/format";
 
 const SES_NAV = [
-  { href: "/ses", label: "Дашборд" },
+  { href: "/ses", label: "Шолу" },
   { href: "/ses/alerts", label: "Алерттер" },
   { href: "/ses/schools", label: "Нысандар" },
   { href: "/ses/suppliers", label: "Жеткізушілер" },
@@ -68,9 +68,6 @@ export function AppHeader({
         </Link>
         <span className="hidden sm:block h-8 w-px bg-line" />
         <p className="hidden sm:block text-sm text-muted leading-tight max-w-[190px] line-clamp-2">{subtitle}</p>
-        <span className="hidden md:inline-block rounded-full bg-page border border-line px-2.5 py-0.5 text-[11px] font-medium text-muted">
-          Демо деректер
-        </span>
 
         {sesNav && (
           <nav className="hidden md:flex items-center gap-1 ml-2">

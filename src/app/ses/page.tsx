@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import type { MapFocus } from "@/components/map/shared";
 import { AlertBanner } from "@/components/ses/AlertBanner";
 import { AlertsPanel } from "@/components/ses/AlertsPanel";
-import { DistrictsCard } from "@/components/ses/DistrictsCard";
+import { KindsCard } from "@/components/ses/KindsCard";
 import { DynamicsCard } from "@/components/ses/DynamicsCard";
 import { InspectionTable } from "@/components/ses/InspectionTable";
 import { JournalCard } from "@/components/ses/JournalCard";
@@ -17,7 +17,7 @@ import { TodayInspectionsCard } from "@/components/ses/TodayInspectionsCard";
 import { fetcher, type Overview, type Stats, type SupplierRow, type Unannounced } from "@/components/ses/types";
 import { shortName } from "@/lib/format";
 
-export default function SesDashboard() {
+export default function SesOverview() {
   const overview = useSWR<Overview>("/api/ses/overview", fetcher, { refreshInterval: 5000 });
   const stats = useSWR<Stats>("/api/ses/stats", fetcher, { refreshInterval: 30000 });
   const suppliers = useSWR<{ suppliers: SupplierRow[] }>("/api/ses/suppliers", fetcher, { refreshInterval: 30000 });
@@ -60,7 +60,7 @@ export default function SesDashboard() {
 
   return (
     <div className="min-h-screen pb-12">
-      <AppHeader subtitle="СЭС дашборды · Маңғыстау облысы" roleLabel="Инспектор · ДСЭК" sesNav live />
+      <AppHeader subtitle="СЭС · бақылау орталығы · Ақтау қаласы" roleLabel="Инспектор · СЭС" sesNav live />
 
       {toast && (
         <div className="anim-slide-in fixed top-20 right-4 z-[60] rounded-lg bg-bad-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
@@ -74,8 +74,8 @@ export default function SesDashboard() {
         )}
         {!data ? (
           <div className="grid gap-5">
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              {Array.from({ length: 5 }, (_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+              {Array.from({ length: 6 }, (_, i) => (
                 <div key={i} className="card h-[118px] animate-pulse" />
               ))}
             </div>
@@ -84,7 +84,7 @@ export default function SesDashboard() {
         ) : (
           <>
             {data.banner && <AlertBanner alert={data.banner} />}
-            <KpiRow kpi={data.kpi} />
+            <KpiRow kpi={data.kpi} schools={data.schools} />
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div ref={mapRef}>
@@ -101,7 +101,7 @@ export default function SesDashboard() {
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
               {stats.data ? <JournalCard journal={stats.data.journal} /> : <div className="card h-[260px] animate-pulse" />}
               {stats.data ? <DynamicsCard dynamics={stats.data.dynamics} /> : <div className="card h-[260px] animate-pulse" />}
-              <DistrictsCard schools={data.schools} />
+              <KindsCard schools={data.schools} />
             </div>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">

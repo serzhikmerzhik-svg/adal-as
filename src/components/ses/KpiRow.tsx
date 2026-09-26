@@ -1,5 +1,6 @@
 import { LevelDot } from "@/components/ui";
-import type { Overview } from "./types";
+import { isEducation } from "@/lib/risk/labels";
+import type { Overview, OverviewSchool } from "./types";
 
 function Kpi({
   label,
@@ -31,11 +32,19 @@ function Kpi({
   );
 }
 
-export function KpiRow({ kpi }: { kpi: Overview["kpi"] }) {
+export function KpiRow({ kpi, schools }: { kpi: Overview["kpi"]; schools: OverviewSchool[] }) {
   const pct = kpi.total ? Math.round((kpi.green / kpi.total) * 100) : 0;
+  const education = schools.filter((s) => isEducation(s.kind)).length;
+  const food = schools.length - education;
   return (
-    <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-      <Kpi label="Жасыл нысандар" value={kpi.green} caption={`${kpi.total} нысанның ${pct}%-ы`} dot="GREEN" delay={0} />
+    <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <Kpi
+        label="Бақылаудағы нысандар"
+        value={kpi.total}
+        caption={food > 0 ? `${education} білім беру · ${food} тамақтану` : "Мектептер мен балабақшалар"}
+        delay={0}
+      />
+      <Kpi label="Жасыл нысандар" value={kpi.green} caption={`${kpi.total} нысанның ${pct}%-ы`} dot="GREEN" delay={40} />
       <Kpi label="Сары нысандар" value={kpi.yellow} caption="Кенет тексеруге ұсынылады" dot="YELLOW" delay={50} />
       <Kpi
         label="Қызыл нысандар"

@@ -14,7 +14,7 @@ const ROLE_HOME: Record<string, string> = {
   NURSE: "/nurse",
   SES: "/ses",
   EDU: "/edu",
-  ADMIN: "/demo",
+  ADMIN: "/training",
 };
 
 export async function POST(request: Request) {

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { getDemoSchool } from "@/lib/demo";
+import { getTrainingSchool } from "@/lib/training";
 import { checkClusterAndAlert } from "@/lib/alerts/cluster";
 
 // 2-қадам: 10 минут ішінде 4 оқушыда ішек-қарын белгілері тіркеледі — қызыл дабыл іске қосылады.
 export async function POST() {
-  const school = await getDemoSchool();
+  const school = await getTrainingSchool();
   const grades = ["5А", "5А", "5Ә", "6Б"];
   const now = Date.now();
 
@@ -16,12 +16,23 @@ export async function POST() {
         grade: grades[i],
         symptoms: i % 2 === 0 ? ["NAUSEA", "ABDOMINAL_PAIN"] : ["VOMITING", "DIARRHEA"],
         reportedAt: new Date(now - (grades.length - i) * 2 * 60 * 1000),
-        createdById: "demo",
+        createdById: "training",
       },
     });
   }
 
   const alert = await checkClusterAndAlert(school.id);
+  // Партия бойынша сарыға көтерілген нысандар (жаттығу бетінде көрсетіледі).
+  const traced = alert
+    ? await prisma.alert.findMany({
+        where: { level: "YELLOW", details: { path: ["sourceAlertId"], equals: alert.id } },
+        select: { school: { select: { code: true, name: true } } },
+      })
+    : [];
 
-  return NextResponse.json({ alertCreated: !!alert, alertId: alert?.id ?? null });
+  return NextResponse.json({
+    alertCreated: !!alert,
+    alertId: alert?.id ?? null,
+    traced: traced.map((t) => t.school.code ?? t.school.name),
+  });
 }

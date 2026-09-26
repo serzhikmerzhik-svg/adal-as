@@ -77,7 +77,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <main className="min-h-screen pb-10">
-      <AppHeader subtitle={school.name} backHref="/ses" roleLabel="Инспектор · ДСЭК" sesNav />
+      <AppHeader subtitle={school.name} backHref="/ses" roleLabel="Инспектор · СЭС" sesNav />
 
       <div className="p-4 max-w-5xl mx-auto space-y-4">
         <section className="card p-4 flex flex-wrap items-center gap-4 justify-between">
@@ -118,11 +118,11 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ece8e0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8eef5" />
                 <XAxis dataKey="date" fontSize={11} />
                 <YAxis domain={[0, 100]} fontSize={11} />
                 <Tooltip />
-                <Line type="monotone" dataKey="score" stroke="#1f3b63" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="score" stroke="#1463d8" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

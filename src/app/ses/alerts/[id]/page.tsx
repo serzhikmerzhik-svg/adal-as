@@ -36,7 +36,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="min-h-screen pb-10">
-      <AppHeader subtitle="Алерт" backHref="/ses/alerts" roleLabel="Инспектор · ДСЭК" sesNav />
+      <AppHeader subtitle="Алерт" backHref="/ses/alerts" roleLabel="Инспектор · СЭС" sesNav />
 
       <div className="p-4 max-w-3xl mx-auto space-y-4">
         <section className={`rounded-lg p-4 border ${alert.level === "RED" ? "bg-bad-50 border-bad-300" : "bg-warn-50 border-warn-500"}`}>
@@ -107,7 +107,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
               <Link
                 key={t.school.id}
                 href={`/ses/school/${t.school.id}`}
-                className="block text-sm text-navy-700 underline"
+                className="block text-sm text-primary underline"
               >
                 {t.school.name} ({t.batchIds.length} партия)
               </Link>

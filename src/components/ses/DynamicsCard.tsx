@@ -22,7 +22,7 @@ export function DynamicsCard({ dynamics }: { dynamics: Stats["dynamics"] }) {
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
-            <CartesianGrid stroke="#ece8e0" vertical={false} />
+            <CartesianGrid stroke="#e8eef5" vertical={false} />
             <XAxis
               dataKey="label"
               fontSize={11}
@@ -33,8 +33,8 @@ export function DynamicsCard({ dynamics }: { dynamics: Stats["dynamics"] }) {
             />
             <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
             <Tooltip formatter={(value, name) => [value, name === "yellow" ? "Сары" : "Қызыл"]} />
-            <Line type="linear" dataKey="yellow" stroke="#d8a524" strokeWidth={2} dot={false} isAnimationActive />
-            <Line type="linear" dataKey="red" stroke="#b8281f" strokeWidth={2} dot={{ r: 0 }} activeDot={{ r: 4 }} />
+            <Line type="linear" dataKey="yellow" stroke="#e0a526" strokeWidth={2} dot={false} isAnimationActive />
+            <Line type="linear" dataKey="red" stroke="#c62828" strokeWidth={2} dot={{ r: 0 }} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

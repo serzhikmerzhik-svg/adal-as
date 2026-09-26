@@ -5,16 +5,17 @@ import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
 import type { MapFocus } from "@/components/map/shared";
 import { AlertsPanel } from "@/components/ses/AlertsPanel";
-import { DistrictsCard } from "@/components/ses/DistrictsCard";
 import { DynamicsCard } from "@/components/ses/DynamicsCard";
 import { InspectionTable } from "@/components/ses/InspectionTable";
+import { KindsCard } from "@/components/ses/KindsCard";
 import { KpiRow } from "@/components/ses/KpiRow";
 import { MapCard } from "@/components/ses/MapCard";
-import { fetcher, type Kind, type Overview, type Stats } from "@/components/ses/types";
+import { fetcher, type Overview, type Stats } from "@/components/ses/types";
+import { isEducation } from "@/lib/risk/labels";
 
-// Білім басқармасы тек білім беру ұйымдарын көреді (қоғамдық асханалар — СЭС құзыреті)
+// Білім бөлімі тек білім беру ұйымдарын көреді (мейрамхана, кафе, асхана — СЭС құзыреті)
 // және ешқандай әрекет жасамайды: тексеру мен нұсқама — СЭС инспекторының шешімі.
-const isEducation = (kind: Kind) => kind !== "CANTEEN";
+const EDU_KINDS = ["SCHOOL", "KINDERGARTEN"] as const;
 
 export default function EduPage() {
   const overview = useSWR<Overview>("/api/ses/overview", fetcher, { refreshInterval: 5000 });
@@ -39,23 +40,23 @@ export default function EduPage() {
 
   return (
     <div className="min-h-screen pb-12">
-      <AppHeader subtitle="Білім беру ұйымдары · Маңғыстау облысы" roleLabel="Білім басқармасы" live />
+      <AppHeader subtitle="Білім беру ұйымдары · Ақтау қаласы" roleLabel="Білім бөлімі" live />
       <main className="max-w-[1440px] mx-auto px-4 lg:px-8 py-6 space-y-5">
         {!data ? (
           <div className="card h-[540px] animate-pulse" />
         ) : (
           <>
             <p className="text-sm text-muted">Тек оқу режимі: мектептер мен балабақшалар. Тексеру мен нұсқаманы СЭС инспекторы тағайындайды.</p>
-            <KpiRow kpi={kpi} />
+            <KpiRow kpi={kpi} schools={schools} />
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
-              <MapCard schools={schools} unannounced={unannounced} focus={focus} onFocus={setFocus} />
+              <MapCard schools={schools} unannounced={unannounced} focus={focus} onFocus={setFocus} kinds={EDU_KINDS} />
               <div className="relative min-h-[420px]">
                 <AlertsPanel alerts={alerts} readOnly className="lg:absolute lg:inset-0 max-h-[560px] lg:max-h-none" />
               </div>
             </div>
             <InspectionTable rows={unannounced} readOnly />
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <DistrictsCard schools={schools} />
+              <KindsCard schools={schools} kinds={EDU_KINDS} />
               {stats.data ? <DynamicsCard dynamics={stats.data.dynamics} /> : <div className="card h-[260px] animate-pulse" />}
             </div>
           </>

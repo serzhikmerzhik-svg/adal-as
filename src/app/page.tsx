@@ -2,19 +2,19 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { Logo } from "@/components/Logo";
 import { HeroCarousel } from "@/components/HeroCarousel";
-import { KitchenIcon, NurseIcon, InspectorIcon, EduIcon, ParentIcon, DemoIcon } from "@/components/Icons";
+import { KitchenIcon, NurseIcon, InspectorIcon, EduIcon, ParentIcon, TrainingIcon } from "@/components/Icons";
 
 const ROLE_HOME: Record<string, string> = {
   KITCHEN: "/kitchen",
   NURSE: "/nurse",
   SES: "/ses",
   EDU: "/edu",
-  ADMIN: "/demo",
+  ADMIN: "/training",
 };
 
 const ROLE_TILES = [
-  { label: "Асхана", hint: "Фото, температура, партия", login: "kitchen_demo", Icon: KitchenIcon },
-  { label: "Медбике", hint: "Белгілер, аты-жөнсіз", login: "nurse_demo", Icon: NurseIcon },
+  { label: "Асхана", hint: "Фото, температура, партия", login: "a12_kitchen", Icon: KitchenIcon },
+  { label: "Медбике", hint: "Белгілер, аты-жөнсіз", login: "a12_nurse", Icon: NurseIcon },
   { label: "СЭС инспекторы", hint: "Карта, дабыл, нұсқама", login: "ses1", Icon: InspectorIcon },
   { label: "Білім басқармасы", hint: "Тек оқу режимі", login: "edu1", Icon: EduIcon },
 ];
@@ -22,8 +22,8 @@ const ROLE_TILES = [
 const STATS = [
   { value: "~300", label: "Бесшоқыдағы улану зардап шеккендері, 2024" },
   { value: "2", label: "Маңғыстаудағы жаппай улану, 2024–2025" },
-  { value: "557", label: "Асхана, мектеп, балабақша — 2GIS деректері" },
-  { value: "5 сек", label: "СЭС дашбордының жаңару жиілігі" },
+  { value: "689", label: "Ақтаудағы тамақтану нысаны — 2GIS деректері" },
+  { value: "5 сек", label: "СЭС бақылау орталығының жаңару жиілігі" },
 ];
 
 const STEPS = [
@@ -91,11 +91,11 @@ export default async function Home() {
             style={{ animationDelay: "450ms" }}
           >
             <div>
-              <p className="font-semibold text-ink">Демо сценарийі</p>
+              <p className="font-semibold text-ink">Оқу-жаттығу режимі</p>
               <p className="text-sm text-muted">Белгі → қызыл дабыл → партияны қадағалау → нұсқама → жабу</p>
             </div>
-            <span className="anim-float bg-navy-50 rounded-lg p-3">
-              <DemoIcon className="w-9 h-9" />
+            <span className="anim-float bg-primary-soft rounded-lg p-3">
+              <TrainingIcon className="w-9 h-9" />
             </span>
           </Link>
         </section>
@@ -107,7 +107,7 @@ export default async function Home() {
               className="anim-fade-up card p-5"
               style={{ animationDelay: `${500 + i * 60}ms` }}
             >
-              <p className="text-2xl font-bold text-navy-700">{s.value}</p>
+              <p className="text-2xl font-bold text-primary">{s.value}</p>
               <p className="text-xs text-muted mt-1">{s.label}</p>
             </div>
           ))}
@@ -122,7 +122,7 @@ export default async function Home() {
                 className="anim-fade-up card p-5 space-y-2"
                 style={{ animationDelay: `${650 + i * 80}ms` }}
               >
-                <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-navy-50 text-navy-700 font-bold text-sm">
+                <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-primary-soft text-primary font-bold text-sm">
                   {s.n}
                 </span>
                 <p className="font-semibold text-ink">{s.title}</p>

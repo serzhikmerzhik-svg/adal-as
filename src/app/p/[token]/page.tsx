@@ -75,7 +75,7 @@ export default function ParentPage({ params }: { params: Promise<{ token: string
         <div className="card p-4 space-y-3">
           <h2 className="font-bold text-ink">Тағамға баға беріңіз</h2>
           {submitted ? (
-            <p className="text-navy-700 font-medium">Рахмет! Пікіріңіз қабылданды.</p>
+            <p className="text-primary font-medium">Рахмет! Пікіріңіз қабылданды.</p>
           ) : (
             <>
               <div className="flex gap-2 justify-center text-3xl">

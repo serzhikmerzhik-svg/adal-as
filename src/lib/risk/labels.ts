@@ -43,16 +43,27 @@ export const INSPECTION_TYPE_LABEL: Record<string, string> = {
   UNSCHEDULED: "Жоспардан тыс",
 };
 
+// Реті маңызды: карта сүзгісі мен карточкалар осы ретпен шығады (білім беру → тамақтану).
+export const FACILITY_KINDS = ["SCHOOL", "KINDERGARTEN", "RESTAURANT", "CAFE", "CANTEEN"] as const;
+export type FacilityKindKey = (typeof FACILITY_KINDS)[number];
+
 export const FACILITY_KIND_LABEL: Record<string, string> = {
-  SCHOOL: "Мектеп",
+  SCHOOL: "Мектеп асханасы",
   KINDERGARTEN: "Балабақша",
-  CANTEEN: "Асхана",
+  RESTAURANT: "Мейрамхана",
+  CAFE: "Кафе",
+  CANTEEN: "Қоғамдық асхана",
 };
 
 export const FACILITY_KIND_PLURAL: Record<string, string> = {
-  SCHOOL: "Мектептер",
+  SCHOOL: "Мектеп асханалары",
   KINDERGARTEN: "Балабақшалар",
-  CANTEEN: "Асханалар",
+  RESTAURANT: "Мейрамханалар",
+  CAFE: "Кафелер",
+  CANTEEN: "Қоғамдық асханалар",
 };
+
+/** Мектеп пен балабақша — білім беру ұйымдары (Білім бөлімі көреді), қалғаны — қоғамдық тамақтану. */
+export const isEducation = (kind: string) => kind === "SCHOOL" || kind === "KINDERGARTEN";
 
 export const symptomsText = (symptoms: string[]) => symptoms.map((s) => SYMPTOM_LABELS[s] ?? s).join(", ");

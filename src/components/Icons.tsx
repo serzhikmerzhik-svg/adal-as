@@ -4,7 +4,7 @@ function Svg({ className = "w-7 h-7", children }: IconProps & { children: React.
   return (
     <svg
       viewBox="0 0 24 24"
-      className={`${className} text-navy-700`}
+      className={`${className} text-primary`}
       fill="none"
       stroke="currentColor"
       strokeWidth={1.6}
@@ -54,7 +54,7 @@ export const ParentIcon = (p: IconProps) => (
   </Svg>
 );
 
-export const DemoIcon = (p: IconProps) => (
+export const TrainingIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="9" />
     <path d="m10 8.5 5 3.5-5 3.5v-7Z" />

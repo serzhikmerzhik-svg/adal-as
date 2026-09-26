@@ -83,7 +83,7 @@ export function InspectionTable({
                       {readOnly ? (
                         <span className="font-semibold text-ink" title={row.name}>{shortName(row.name, row.kind)}</span>
                       ) : (
-                        <Link href={`/ses/school/${row.id}`} className="font-semibold text-ink hover:text-navy-700" title={row.name}>
+                        <Link href={`/ses/school/${row.id}`} className="font-semibold text-ink hover:text-primary" title={row.name}>
                           {shortName(row.name, row.kind)}
                         </Link>
                       )}
@@ -91,7 +91,7 @@ export function InspectionTable({
                         <button
                           type="button"
                           onClick={() => onShowOnMap(row)}
-                          className="text-muted hover:text-navy-700"
+                          className="text-muted hover:text-primary"
                           aria-label="Картада көрсету"
                           title="Картада көрсету"
                         >

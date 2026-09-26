@@ -108,7 +108,7 @@ export function SuppliersCard({
                         )}
                         <button
                           type="button"
-                          className="text-xs text-navy-700 underline"
+                          className="text-xs text-primary underline"
                           aria-expanded={open === s.id}
                           onClick={() => setOpen(open === s.id ? null : s.id)}
                         >
@@ -141,7 +141,7 @@ export function SuppliersCard({
         </table>
       </div>
       {limit && suppliers.length > limit && (
-        <Link href="/ses/suppliers" className="mt-3 inline-block text-xs text-navy-700 underline">
+        <Link href="/ses/suppliers" className="mt-3 inline-block text-xs text-primary underline">
           Барлық жеткізушілер ({suppliers.length})
         </Link>
       )}
