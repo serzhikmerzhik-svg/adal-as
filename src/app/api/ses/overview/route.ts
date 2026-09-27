@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { todayRange } from "@/lib/date";
 import { riskReasons } from "@/lib/risk/reasons";
+import { getT } from "@/i18n/server";
 
 // Дашборд әр 5 секунд сайын сұрайды: 500+ нысан үшін тек қажет өрістер жіберіледі.
 export async function GET() {
+  const t = await getT();
   const { start } = todayRange();
 
   const [schools, alerts, openAlerts, overduePrescriptions] = await Promise.all([
@@ -31,6 +33,7 @@ export async function GET() {
         status: true,
         createdAt: true,
         relatedBatchId: true,
+        rule: true,
         details: true,
         school: { select: { id: true, name: true, kind: true, address: true, district: { select: { name: true } } } },
       },
@@ -43,10 +46,11 @@ export async function GET() {
   const tracedCount = (redId: string) =>
     alerts.filter((a) => (a.details as { sourceAlertId?: string } | null)?.sourceAlertId === redId).length;
 
-  const alertsOut = alerts.map(({ details, ...a }) => ({
+  // details интерфейске де жіберіледі: ереже алерттерінің мәтіні таңдалған тілде құрастырылады (alertText).
+  const alertsOut = alerts.map((a) => ({
     ...a,
-    batchCode: (details as { batchCode?: string } | null)?.batchCode ?? null,
-    tracedCount: a.level === "RED" ? tracedCount(a.id) : 0,
+    batchCode: (a.details as { batchCode?: string } | null)?.batchCode ?? null,
+    tracedCount: a.level === "RED" && !a.rule ? tracedCount(a.id) : 0,
   }));
 
   const openRedAlert = alertsOut.find((a) => a.level === "RED" && a.status === "OPEN");
@@ -68,7 +72,7 @@ export async function GET() {
     }),
     prisma.alert.findMany({
       where: { schoolId: { in: flaggedIds }, status: { in: ["OPEN", "ACKNOWLEDGED"] } },
-      select: { schoolId: true, level: true, details: true, relatedBatchId: true },
+      select: { schoolId: true, level: true, rule: true, details: true, relatedBatchId: true },
     }),
     prisma.inspection.findMany({
       where: { schoolId: { in: flaggedIds }, doneAt: null, plannedAt: { gte: start } },
@@ -85,13 +89,13 @@ export async function GET() {
     const components = snapshots.find((x) => x.schoolId === s.id)?.components as Record<string, number> | undefined;
     const schoolAlerts = flaggedAlerts
       .filter((a) => a.schoolId === s.id)
-      .map((a) => ({ level: a.level, batchCode: a.relatedBatchId ? (batchCode.get(a.relatedBatchId) ?? null) : null }));
+      .map((a) => ({ level: a.level, rule: a.rule, batchCode: a.relatedBatchId ? (batchCode.get(a.relatedBatchId) ?? null) : null }));
     return {
       ...s,
       address: d?.address ?? "",
       lastInspectionAt: d?.lastInspectionAt ?? null,
       plannedInspectionAt: planned.find((p) => p.schoolId === s.id)?.plannedAt ?? null,
-      reasons: riskReasons(components, schoolAlerts),
+      reasons: riskReasons(components, schoolAlerts, t),
     };
   });
 

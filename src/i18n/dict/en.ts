@@ -205,7 +205,6 @@ export const en: Dict = {
     accounts: {
       a12_kitchen: "School canteen",
       a12_nurse: "School nurse",
-      m07_kitchen: "Restaurant kitchen",
       ad_kitchen: "School №AD canteen",
       ses1: "SES inspector",
       edu1: "Education department",
@@ -412,6 +411,14 @@ export const en: Dict = {
     more: (n) => `Show more (${n})`,
   },
   schoolPage: {
+    todayTitle: "Today in the canteen",
+    noMenuToday: "No menu entered for today.",
+    devicesTitle: "Devices and sensors",
+    noDevices: "No devices connected: temperatures are entered by hand.",
+    fridge24h: "Fridge sensor, last 24 hours",
+    fridgeNorm: "Green band — norm 2–6 °C",
+    eatTitle: "Eating index, last 7 days",
+    noEat: "No plate waste photos yet.",
     componentsTitle: "Risk score breakdown",
     historyTitle: "Risk over the last 30 days",
     assignTitle: "Schedule inspection",

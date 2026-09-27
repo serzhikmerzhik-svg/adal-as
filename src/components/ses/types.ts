@@ -12,6 +12,9 @@ export type OverviewAlert = {
   status: "OPEN" | "ACKNOWLEDGED" | "CLOSED";
   createdAt: string;
   relatedBatchId: string | null;
+  /** Автоматты ереже: FRIDGE, OFF_PLAN, INGREDIENT, EATABILITY (кластер мен балл алерттерінде null). */
+  rule: string | null;
+  details: unknown;
   batchCode: string | null;
   tracedCount: number;
   school: { id: string; name: string; kind: Kind; address: string; district: { name: string } };

@@ -6,7 +6,7 @@ import { useT } from "@/i18n/client";
 
 // Жылдам кіру аккаунттары (prisma/seed.ts). Құпиясөз бандлда сақталмайды: ол SEED_PASSWORD арқылы
 // орнатылады және қолмен енгізіледі.
-const TEST_ACCOUNTS = ["a12_kitchen", "a12_nurse", "m07_kitchen", "ses1", "edu1"];
+const TEST_ACCOUNTS = ["a12_kitchen", "a12_nurse", "ad_kitchen", "ses1", "edu1"];
 
 export function LoginForm({ initialLogin }: { initialLogin?: string }) {
   const router = useRouter();

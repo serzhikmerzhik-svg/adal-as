@@ -6,6 +6,8 @@ import QRCode from "qrcode";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { THEME } from "@/lib/theme";
 import { AppHeader } from "@/components/AppHeader";
+import { FacilityOpsCard } from "@/components/ses/FacilityOpsCard";
+import { hasPlan } from "@/lib/plan";
 import { dateTime, ddmm, fullDate } from "@/lib/format";
 import {
   RISK_COMPONENT_LABELS,
@@ -99,6 +101,8 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
             </div>
           )}
         </section>
+
+        {data.ops && <FacilityOpsCard ops={data.ops} withPlan={hasPlan(school.kind)} generatedAt={data.generatedAt} />}
 
         {latestComponents && (
           <section className="card p-4">

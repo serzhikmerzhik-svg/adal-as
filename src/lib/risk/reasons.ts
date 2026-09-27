@@ -1,18 +1,28 @@
+import type { Dict } from "@/i18n/dict";
 import { RISK_WEIGHTS } from "./config";
 
-type AlertInfo = { level: string; batchCode: string | null };
+type AlertInfo = { level: string; batchCode: string | null; rule?: string | null };
 
 /**
- * Инспекторға түсінікті «негізгі себеп» мәтіні: алдымен ашық алерттер (улану кластері,
- * партия), содан кейін тәуекел балының ең үлкен құрамдас бөліктері.
+ * Инспекторға түсінікті «негізгі себеп» мәтіні (таңдалған тілде): алдымен ашық алерттер (улану кластері,
+ * автоматты ережелер, партия), содан кейін тәуекел балының ең үлкен құрамдас бөліктері.
  */
-export function riskReasons(components: Record<string, number> | undefined, alerts: AlertInfo[]): string[] {
+export function riskReasons(components: Record<string, number> | undefined, alerts: AlertInfo[], t: Pick<Dict, "reasons" | "rules">): string[] {
+  const r = t.reasons;
   const reasons: string[] = [];
 
-  const red = alerts.find((a) => a.level === "RED");
-  if (red) reasons.push(red.batchCode ? `Улану кластері · партия ${red.batchCode}` : "Улану кластері");
-  const traced = alerts.find((a) => a.level === "YELLOW" && a.batchCode);
-  if (traced) reasons.push(`Партия ${traced.batchCode} алған`);
+  const red = alerts.find((a) => a.level === "RED" && !a.rule);
+  if (red) reasons.push(red.batchCode ? r.clusterBatch(red.batchCode) : r.cluster);
+  // Автоматты ережелер: қызыл (тоңазытқыш) бірінші.
+  alerts
+    .filter((a) => a.rule && t.rules.names[a.rule])
+    .sort((a, b) => (a.level === "RED" ? 0 : 1) - (b.level === "RED" ? 0 : 1))
+    .forEach((a) => {
+      const name = t.rules.names[a.rule!];
+      if (!reasons.includes(name)) reasons.push(name);
+    });
+  const traced = alerts.find((a) => a.level === "YELLOW" && a.batchCode && !a.rule);
+  if (traced) reasons.push(r.tracedBatch(traced.batchCode!));
 
   if (components && !("seed" in components)) {
     // Балл шегіне жеткенде нақты сан белгісіз, сондықтан "5+" деп жазылады.
@@ -20,13 +30,13 @@ export function riskReasons(components: Record<string, number> | undefined, aler
     const temp = components.tempViolations ?? 0;
     const photos = components.missingPhotos ?? 0;
     const phrases: [number, string][] = [
-      [temp, `${count(temp, RISK_WEIGHTS.TEMP_VIOLATION_POINTS, RISK_WEIGHTS.TEMP_VIOLATION_MAX)} температура бұзушылығы (14 күн)`],
-      [photos, `${count(photos, RISK_WEIGHTS.MISSING_PHOTO_POINTS, RISK_WEIGHTS.MISSING_PHOTO_MAX)} күн фото жоқ`],
-      [components.parentRating ?? 0, "Ата-ана/келуші бағасы төмен"],
-      [components.complaintSpike ?? 0, "Шағымдар күрт өсті"],
-      [components.supplierRisk ?? 0, "Жеткізуші тәуекелі"],
-      [components.overduePrescriptions ?? 0, "Нұсқама мерзімі өтті"],
-      [components.inspectionAge ?? 0, "Тексеру ескірген"],
+      [temp, r.temp(count(temp, RISK_WEIGHTS.TEMP_VIOLATION_POINTS, RISK_WEIGHTS.TEMP_VIOLATION_MAX))],
+      [photos, r.photos(count(photos, RISK_WEIGHTS.MISSING_PHOTO_POINTS, RISK_WEIGHTS.MISSING_PHOTO_MAX))],
+      [components.parentRating ?? 0, r.rating],
+      [components.complaintSpike ?? 0, r.complaints],
+      [components.supplierRisk ?? 0, r.supplier],
+      [components.overduePrescriptions ?? 0, r.overdue],
+      [components.inspectionAge ?? 0, r.inspectionOld],
     ];
     phrases
       .filter(([points]) => points > 0)

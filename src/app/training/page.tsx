@@ -5,46 +5,37 @@ import Link from "next/link";
 import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
 import { fetcher } from "@/components/ses/types";
+import { useT } from "@/i18n/client";
 
-type Step = "step1" | "step2" | "reset";
+type Step = "step1" | "step2" | "fridge" | "reset";
 type Info = { school: string; batch: { code: string; product: string } | null; recipients: string[] };
-
-function steps(info?: Info): { id: Exclude<Step, "reset">; title: string; text: string; tone: "primary" | "danger" }[] {
-  const school = info?.school ?? "Мектеп";
-  const batch = info?.batch ? `${info.batch.code} партиясы (${info.batch.product.toLowerCase()})` : "Бүгінгі партия";
-  const recipients = info?.recipients.length ? info.recipients.join(", ") : "басқа нысандар";
-  return [
-    {
-      id: "step1",
-      title: `1. ${school} асханасы күнделікті журналды толтырады`,
-      text: `Бүгінгі мәзір, порция фотосы және тоңазытқыш пен ыстық тағам температурасы. ${batch} мәзірге байланады.`,
-      tone: "primary",
-    },
-    {
-      id: "step2",
-      title: "2. Медбике 4 оқушыда ішек-қарын белгілерін тіркейді",
-      text: `10 минут ішінде 4 тіркеу — кластер. Жүйе қызыл дабыл береді, мәзірді бұғаттайды, сол партияны алған ${recipients} нысандарын сарыға көтереді.`,
-      tone: "danger",
-    },
-  ];
-}
-
-function describe(step: Step, data: Record<string, unknown>, school: string) {
-  if (step === "step1") return `Мәзір толтырылды · ${school} деңгейі: ${data.riskLevel === "GREEN" ? "жасыл" : String(data.riskLevel)}`;
-  if (step === "step2") {
-    if (!data.alertCreated) return "Кластер бұрыннан тіркелген: жаңа дабыл жоқ";
-    const traced = (data.traced as string[] | undefined) ?? [];
-    return `Қызыл дабыл іске қосылды · партия бойынша сарыға көтерілді: ${traced.join(", ") || "—"}`;
-  }
-  return "Бастапқы күйге қайтарылды";
-}
 
 /** Питч пен оқыту кезінде негізгі сценарийді нақты API арқылы ретімен іске қосады. */
 export default function TrainingPage() {
+  const t = useT();
+  const tr = t.training;
   const [log, setLog] = useState<{ ok: boolean; text: string; at: string }[]>([]);
   const [busy, setBusy] = useState<Step | null>(null);
   const [alertId, setAlertId] = useState<string | null>(null);
   const { data: info } = useSWR<Info>("/api/training", fetcher);
+
+  const school = info?.school ?? tr.schoolFallback;
+  const batch = info?.batch ? tr.batch(info.batch.code, info.batch.product) : tr.batchFallback;
+  const recipients = info?.recipients.length ? info.recipients.join(", ") : tr.recipientsFallback;
+  const steps: { id: "step1" | "step2" | "fridge"; title: string; text: string; button: string; tone: "primary" | "danger" }[] = [
+    { id: "step1", title: tr.step1Title(school), text: tr.step1Text(batch), button: tr.step1Btn, tone: "primary" },
+    { id: "step2", title: tr.step2Title, text: tr.step2Text(recipients), button: tr.step2Btn, tone: "danger" },
+  ];
+
+  function describe(step: Step, data: Record<string, unknown>) {
+    if (step === "step1") return tr.step1Done(school, t.levels[String(data.riskLevel)] ?? String(data.riskLevel));
+    if (step === "step2") {
+      if (!data.alertCreated) return tr.step2Exists;
+      return tr.step2Done(((data.traced as string[] | undefined) ?? []).join(", ") || "—");
+    }
+    if (step === "fridge") return tr.fridgeDone(Number(data.peak));
+    return tr.resetDone;
+  }
 
   async function run(step: Step) {
     setBusy(step);
@@ -53,12 +44,12 @@ export default function TrainingPage() {
       const res = await fetch(`/api/training/${step}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setLog((l) => [{ ok: false, text: data.error ?? "Қате шықты", at }, ...l]);
+        setLog((l) => [{ ok: false, text: data.error ?? t.common.error, at }, ...l]);
         return;
       }
-      if (step === "step2" && data.alertId) setAlertId(data.alertId);
+      if ((step === "step2" || step === "fridge") && data.alertId) setAlertId(data.alertId);
       if (step === "reset") setAlertId(null);
-      setLog((l) => [{ ok: true, text: describe(step, data, info?.school ?? "Нысан"), at }, ...l]);
+      setLog((l) => [{ ok: true, text: describe(step, data), at }, ...l]);
     } finally {
       setBusy(null);
     }
@@ -66,19 +57,16 @@ export default function TrainingPage() {
 
   return (
     <main className="min-h-screen pb-10">
-      <AppHeader subtitle="Оқу-жаттығу режимі" />
+      <AppHeader subtitle={tr.subtitle} />
 
-      <div className="p-4 max-w-2xl mx-auto space-y-4">
+      <div className="mx-auto max-w-2xl space-y-4 p-4">
         <section className="card p-5">
-          <h1 className="text-lg font-semibold text-ink">Негізгі сценарий: белгі → дабыл → партия → нұсқама</h1>
-          <p className="mt-1 text-sm text-muted">
-            Қадамдар нақты API арқылы жүреді: асхана мен медбикенің қосымшасы жасайтын жазбалар жасалады, тәуекелді
-            сол логика есептейді. СЭС бетін екінші терезеде ашып қойыңыз — өзгеріс 5 секунд ішінде шығады.
-          </p>
+          <h1 className="text-lg font-semibold text-ink">{tr.title}</h1>
+          <p className="mt-1 text-sm text-muted">{tr.intro}</p>
         </section>
 
-        {steps(info).map((s) => (
-          <section key={s.id} className="card p-5 space-y-3">
+        {steps.map((s) => (
+          <section key={s.id} className="card space-y-3 p-5">
             <div>
               <h2 className="font-semibold text-ink">{s.title}</h2>
               <p className="mt-1 text-sm text-muted">{s.text}</p>
@@ -89,33 +77,45 @@ export default function TrainingPage() {
               disabled={busy !== null}
               className={`btn w-full ${s.tone === "danger" ? "btn-danger" : "btn-primary"}`}
             >
-              {busy === s.id ? "Орындалуда..." : s.id === "step1" ? "Журналды толтыру" : "Белгілерді тіркеу"}
+              {busy === s.id ? tr.running : s.button}
             </button>
           </section>
         ))}
 
-        <section className="card p-5 space-y-3">
-          <h2 className="font-semibold text-ink">3. СЭС инспекторы әрекет етеді</h2>
-          <p className="text-sm text-muted">
-            Дабылды қабылдайды, кенет тексеру тағайындайды, қажет болса жеткізушіні бұғаттап, нұсқама береді.
-          </p>
+        <section className="card space-y-3 p-5">
+          <h2 className="font-semibold text-ink">{tr.step3Title}</h2>
+          <p className="text-sm text-muted">{tr.step3Text}</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/ses" className="btn btn-outline">СЭС бақылау орталығы →</Link>
+            <Link href="/ses" className="btn btn-outline">
+              {tr.sesLink}
+            </Link>
             {alertId && (
-              <Link href={`/ses/alerts/${alertId}`} className="btn btn-outline">Қызыл дабыл карточкасы →</Link>
+              <Link href={`/ses/alerts/${alertId}`} className="btn btn-outline">
+                {tr.alertLink}
+              </Link>
             )}
           </div>
         </section>
 
+        <section className="card space-y-3 border border-line p-5">
+          <div>
+            <h2 className="font-semibold text-ink">{tr.fridgeTitle}</h2>
+            <p className="mt-1 text-sm text-muted">{tr.fridgeText(school)}</p>
+          </div>
+          <button type="button" onClick={() => run("fridge")} disabled={busy !== null} className="btn btn-danger w-full">
+            {busy === "fridge" ? tr.running : tr.fridgeBtn}
+          </button>
+        </section>
+
         <button type="button" onClick={() => run("reset")} disabled={busy !== null} className="btn btn-outline w-full">
-          {busy === "reset" ? "Қайтарылуда..." : "Бастапқы күйге қайтару"}
+          {busy === "reset" ? tr.resetting : tr.reset}
         </button>
 
-        <section className="card p-4 space-y-1.5 text-sm max-h-64 overflow-y-auto" aria-live="polite">
-          {log.length === 0 && <p className="text-muted">Әрекет журналы бос.</p>}
+        <section className="card max-h-64 space-y-1.5 overflow-y-auto p-4 text-sm" aria-live="polite">
+          {log.length === 0 && <p className="text-muted">{tr.logEmpty}</p>}
           {log.map((l, i) => (
             <p key={i} className={l.ok ? "text-ink" : "text-bad-700"}>
-              <span className="font-mono text-xs text-muted mr-2">{l.at}</span>
+              <span className="mr-2 font-mono text-xs text-muted">{l.at}</span>
               {l.text}
             </p>
           ))}

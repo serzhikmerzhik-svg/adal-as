@@ -55,6 +55,7 @@ export function AppHeader({
     { href: "/ses/alerts", label: t.header.nav.alerts },
     { href: "/ses/schools", label: t.header.nav.facilities },
     { href: "/ses/suppliers", label: t.header.nav.suppliers },
+    { href: "/ses/menu-plan", label: t.header.nav.plan },
   ];
 
   return (

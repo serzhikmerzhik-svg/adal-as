@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { RiskLevel } from "@prisma/client";
 import { RISK_THRESHOLDS, RISK_WEIGHTS } from "./config";
 import { riskReasons } from "./reasons";
+import { getDict } from "@/i18n/dict";
 
 export type RiskComponents = {
   tempViolations: number;
@@ -208,7 +209,7 @@ export async function recomputeSchoolRisk(schoolId: string) {
         data: {
           schoolId,
           level: "YELLOW",
-          reason: `Тәуекел ${score} баллға жетті: ${riskReasons(components, []).join(" · ")}`,
+          reason: `Тәуекел ${score} баллға жетті: ${riskReasons(components, [], getDict("kk")).join(" · ")}`,
           details: { score, components } as unknown as object,
         },
       });

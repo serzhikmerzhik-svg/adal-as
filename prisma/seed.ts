@@ -622,7 +622,6 @@ async function main() {
     data: [
       { login: "a12_kitchen", passwordHash, name: "Мектеп асханасы", role: "KITCHEN", schoolId: byCode.get("А-12")!.id },
       { login: "a12_nurse", passwordHash, name: "Мектеп медбикесі", role: "NURSE", schoolId: byCode.get("А-12")!.id },
-      { login: "m07_kitchen", passwordHash, name: "Мейрамхана асханасы", role: "KITCHEN", schoolId: byCode.get("М-07")!.id },
       // №AD мектеп асханасы (№14 мектеп, 26-мкр): термометр-щуп демосы.
       { login: "ad_kitchen", passwordHash, name: "№AD мектеп асханасы", role: "KITCHEN", schoolId: byCode.get("А-14")!.id },
       { login: "ses1", passwordHash, name: "СЭС инспекторы", role: "SES", schoolId: null },
