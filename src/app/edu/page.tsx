@@ -10,6 +10,7 @@ import { InspectionTable } from "@/components/ses/InspectionTable";
 import { KindsCard } from "@/components/ses/KindsCard";
 import { KpiRow } from "@/components/ses/KpiRow";
 import { MapCard } from "@/components/ses/MapCard";
+import { PhotoFeedCard } from "@/components/ses/PhotoFeedCard";
 import { fetcher, type Overview, type Stats } from "@/components/ses/types";
 import { isEducation } from "@/lib/risk/labels";
 
@@ -54,6 +55,7 @@ export default function EduPage() {
                 <AlertsPanel alerts={alerts} readOnly className="lg:absolute lg:inset-0 max-h-[560px] lg:max-h-none" />
               </div>
             </div>
+            <PhotoFeedCard readOnly include={(p) => isEducation(p.school.kind)} />
             <InspectionTable rows={unannounced} readOnly />
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <KindsCard schools={schools} kinds={EDU_KINDS} />

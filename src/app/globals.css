@@ -338,3 +338,28 @@ body {
 
 .map-pin.kind-RESTAURANT .map-dot,
 .map-pin.kind-CAFE .map-dot { border-radius: 3px; }
+
+/* UI UX Pro Max чек-лисі: пернетақтамен жүргенде фокус көрінеді, басылатын элементте меңзер,
+   телефонда өріс ≥44px және 16px (iOS өріс басылғанда бетті үлкейтпеуі үшін). */
+@layer base {
+  :where(a, button, [role="button"], summary, select):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  :where(button:not(:disabled), [role="button"], summary, label:has(> input[type="file"])) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .chip,
+  .seg > button {
+    cursor: pointer;
+  }
+  @media (max-width: 640px) {
+    .field {
+      min-height: 44px;
+      font-size: 16px;
+    }
+  }
+}

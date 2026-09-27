@@ -87,6 +87,27 @@ export type SupplierRow = {
   }[];
 };
 
+export type PhotoStatus = "PENDING" | "OK" | "FLAGGED" | "ERROR" | "DISABLED";
+
+export type PhotoRow = {
+  id: string;
+  createdAt: string;
+  aiStatus: PhotoStatus;
+  aiIssues: string[];
+  aiPortionPct: number | null;
+  aiSummary: string | null;
+  aiModel: string | null;
+  reviewedAt: string | null;
+  imageUrl: string;
+  menuItem: { name: string; standardPortionG: number | null } | null;
+  school: { id: string; name: string; kind: Kind; district: { name: string } };
+};
+
+export type PhotoFeed = {
+  photos: PhotoRow[];
+  counts: { total: number; pending: number; ok: number; flagged: number; unreviewed: number; aiOff: number };
+};
+
 export const fetcher = (url: string) =>
   fetch(url).then((r) => {
     if (!r.ok) throw new Error(`${url}: ${r.status}`);

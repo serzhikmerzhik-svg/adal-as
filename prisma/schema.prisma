@@ -64,6 +64,15 @@ enum FacilityKind {
   CANTEEN
 }
 
+// Порция фотосын ИИ тексеруі: инспектор тек FLAGGED фотоларды қарайды.
+enum PhotoCheck {
+  PENDING
+  OK
+  FLAGGED
+  ERROR
+  DISABLED
+}
+
 model District {
   id      String   @id @default(cuid())
   name    String
@@ -169,6 +178,19 @@ model KitchenLog {
   isViolation Boolean   @default(false)
   createdAt   DateTime  @default(now())
   createdById String
+
+  // Тек PHOTO жазбалары үшін: sha256 (қайталанған фотоны табу) және ИИ тексеруінің нәтижесі.
+  photoHash    String?
+  aiStatus     PhotoCheck?
+  aiIssues     String[]    @default([])
+  aiPortionPct Int?
+  aiSummary    String?
+  aiModel      String?
+  aiCheckedAt  DateTime?
+  reviewedAt   DateTime?
+
+  @@index([type, createdAt])
+  @@index([photoHash])
 }
 
 model SymptomReport {

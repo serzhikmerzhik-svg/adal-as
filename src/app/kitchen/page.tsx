@@ -3,9 +3,12 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { AppHeader } from "@/components/AppHeader";
+import { PHOTO_STATUS } from "@/components/ses/PhotoFeedCard";
+import type { PhotoStatus } from "@/components/ses/types";
 import { compressImageToDataUrl } from "@/lib/image";
+import { issueLabels } from "@/lib/photo/verdict";
 import { PRESCRIPTION_STATUS_LABEL } from "@/lib/risk/labels";
-import { fullDate } from "@/lib/format";
+import { fullDate, shortName } from "@/lib/format";
 
 type KitchenLog = {
   id: string;
@@ -14,6 +17,10 @@ type KitchenLog = {
   photoUrl: string | null;
   isViolation: boolean;
   createdAt: string;
+  aiStatus: PhotoStatus | null;
+  aiIssues: string[];
+  aiPortionPct: number | null;
+  aiSummary: string | null;
 };
 
 type MenuItem = {
@@ -44,13 +51,24 @@ async function uploadPhoto(dataUrl: string) {
   return data.url as string;
 }
 
-type TodayResponse = { menuItems?: MenuItem[]; prescriptions?: Prescription[]; suppliers?: Supplier[] };
+type TodayResponse = {
+  school?: { name: string; kind: string };
+  menuItems?: MenuItem[];
+  prescriptions?: Prescription[];
+  suppliers?: Supplier[];
+};
+
+// ИИ тексеруі жүріп жатқанда жиірек сұраймыз, нәтиже асханаға бірден көрінсін.
+const hasPendingPhoto = (data?: TodayResponse) =>
+  !!data?.menuItems?.some((m) => m.logs.some((l) => l.type === "PHOTO" && l.aiStatus === "PENDING"));
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function KitchenPage() {
   // СЭС бұғаттаған тағамдар мен жаңа нұсқамалар асханаға да көрінуі үшін мезгіл-мезгіл жаңарады.
-  const { data, mutate: load } = useSWR<TodayResponse>("/api/kitchen/today", fetcher, { refreshInterval: 15000 });
+  const { data, mutate: load } = useSWR<TodayResponse>("/api/kitchen/today", fetcher, {
+    refreshInterval: (latest) => (hasPendingPhoto(latest) ? 2500 : 15000),
+  });
   const menuItems = data?.menuItems ?? [];
   const prescriptions = data?.prescriptions ?? [];
   const suppliers = data?.suppliers ?? [];
@@ -59,18 +77,22 @@ export default function KitchenPage() {
   const [tempInputs, setTempInputs] = useState<Record<string, string>>({});
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [showMenuForm, setShowMenuForm] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function handlePhoto(menuItemId: string, file: File) {
     setBusyId(menuItemId);
     try {
       const dataUrl = await compressImageToDataUrl(file);
       const url = await uploadPhoto(dataUrl);
-      await fetch("/api/kitchen/logs", {
+      const res = await fetch("/api/kitchen/logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ menuItemId, type: "PHOTO", photoUrl: url }),
       });
+      setNotice(res.ok ? "Фото жіберілді: СЭС инспекторы көреді, ИИ порцияны тексеріп жатыр." : "Фотоны жіберу мүмкін болмады. Қайта көріңіз.");
       await load();
+    } catch {
+      setNotice("Фотоны жіберу мүмкін болмады. Интернетті тексеріп, қайта көріңіз.");
     } finally {
       setBusyId(null);
     }
@@ -145,9 +167,15 @@ export default function KitchenPage() {
 
   return (
     <main className="min-h-screen pb-24">
-      <AppHeader subtitle="Асхана журналы" roleLabel="Асхана қызметкері" />
+      <AppHeader
+        subtitle={data?.school ? `Асхана журналы · ${shortName(data.school.name, data.school.kind)}` : "Асхана журналы"}
+        roleLabel="Асхана қызметкері"
+      />
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+        <p aria-live="polite" className={notice ? "anim-slide-in rounded-lg bg-primary-soft px-3 py-2 text-sm text-ink" : "sr-only"}>
+          {notice}
+        </p>
         {prescriptions.length > 0 && (
           <section className="bg-warn-50 border border-warn-500 rounded-lg p-4 space-y-3">
             <h2 className="font-bold text-warn-700">Ашық нұсқамалар</h2>
@@ -285,38 +313,58 @@ export default function KitchenPage() {
                   />
                 </label>
 
+                {lastPhoto?.aiStatus && (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                    <span className={`inline-flex items-center rounded-md px-2 py-0.5 font-bold ${PHOTO_STATUS[lastPhoto.aiStatus].className}`}>
+                      {PHOTO_STATUS[lastPhoto.aiStatus].label}
+                    </span>
+                    {lastPhoto.aiPortionPct !== null && <span className="text-muted">порция ≈ {lastPhoto.aiPortionPct}%</span>}
+                    {issueLabels(lastPhoto.aiIssues).map((label) => (
+                      <span key={label} className="font-medium text-warn-700">{label}</span>
+                    ))}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted">Тоңазытқыш, °C</label>
+                    <label htmlFor={fridgeKey} className="text-xs text-muted">Тоңазытқыш, °C</label>
                     <div className="flex gap-1">
                       <input
+                        id={fridgeKey}
                         type="number"
+                        inputMode="decimal"
+                        step="0.1"
                         value={tempInputs[fridgeKey] ?? ""}
                         onChange={(e) => setTempInputs((s) => ({ ...s, [fridgeKey]: e.target.value }))}
-                        className="w-full border border-line-strong rounded-lg px-2 py-2 text-sm"
+                        className="field min-h-11"
                       />
                       <button
+                        type="button"
                         onClick={() => handleTemp(item.id, "FRIDGE_TEMP")}
                         disabled={busyId === fridgeKey}
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary"
                       >
                         ОК
                       </button>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted">Ыстық тағам, °C</label>
+                    <label htmlFor={hotKey} className="text-xs text-muted">Ыстық тағам, °C</label>
                     <div className="flex gap-1">
                       <input
+                        id={hotKey}
                         type="number"
+                        inputMode="decimal"
+                        step="0.1"
                         value={tempInputs[hotKey] ?? ""}
                         onChange={(e) => setTempInputs((s) => ({ ...s, [hotKey]: e.target.value }))}
-                        className="w-full border border-line-strong rounded-lg px-2 py-2 text-sm"
+                        className="field min-h-11"
                       />
                       <button
+                        type="button"
                         onClick={() => handleTemp(item.id, "HOT_TEMP")}
                         disabled={busyId === hotKey}
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary"
                       >
                         ОК
                       </button>

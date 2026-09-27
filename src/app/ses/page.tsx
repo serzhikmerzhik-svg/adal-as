@@ -12,6 +12,7 @@ import { InspectionTable } from "@/components/ses/InspectionTable";
 import { JournalCard } from "@/components/ses/JournalCard";
 import { KpiRow } from "@/components/ses/KpiRow";
 import { MapCard } from "@/components/ses/MapCard";
+import { PhotoFeedCard } from "@/components/ses/PhotoFeedCard";
 import { SuppliersCard } from "@/components/ses/SuppliersCard";
 import { TodayInspectionsCard } from "@/components/ses/TodayInspectionsCard";
 import { fetcher, type Overview, type Stats, type SupplierRow, type Unannounced } from "@/components/ses/types";
@@ -95,6 +96,8 @@ export default function SesOverview() {
                 <AlertsPanel alerts={data.alerts} onChanged={refreshAll} className="lg:absolute lg:inset-0 max-h-[560px] lg:max-h-none" />
               </div>
             </div>
+
+            <PhotoFeedCard />
 
             <InspectionTable rows={data.unannounced} onChanged={refreshAll} onShowOnMap={showOnMap} />
 

@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth/session";
 import { TEMP } from "@/lib/risk/config";
 import { recomputeSchoolRisk } from "@/lib/risk/score";
+import { checkPhotoLog } from "@/lib/photo/check";
+
+// Тәуекел мен фото тексеруі жауаптан кейін (after) жүреді, асхана күтіп тұрмайды.
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   menuItemId: z.string().optional(),
@@ -41,10 +45,13 @@ export async function POST(request: Request) {
       photoUrl: type === "PHOTO" ? photoUrl : null,
       isViolation: type !== "PHOTO" && valueC !== undefined ? isViolation(type, valueC) : false,
       createdById: session.userId,
+      aiStatus: type === "PHOTO" ? "PENDING" : null,
     },
   });
+  // Тәуекелді қайта есептеу мен фото тексеруі жауаптан кейін жүреді: асхана қызметкері бірден жалғастырады,
+  // ал СЭС беті өзгерісті 5 секунд ішінде алады.
+  const schoolId = session.schoolId;
+  after(() => Promise.all([recomputeSchoolRisk(schoolId), type === "PHOTO" ? checkPhotoLog(log.id) : null]));
 
-  const { level } = await recomputeSchoolRisk(session.schoolId);
-
-  return NextResponse.json({ log, riskLevel: level });
+  return NextResponse.json({ log: { ...log, photoUrl: undefined } });
 }

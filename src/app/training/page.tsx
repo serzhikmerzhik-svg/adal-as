@@ -66,7 +66,7 @@ export default function TrainingPage() {
 
   return (
     <main className="min-h-screen pb-10">
-      <AppHeader subtitle="Оқу-жаттығу режимі" roleLabel="Әкімші" />
+      <AppHeader subtitle="Оқу-жаттығу режимі" />
 
       <div className="p-4 max-w-2xl mx-auto space-y-4">
         <section className="card p-5">
