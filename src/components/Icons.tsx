@@ -83,3 +83,11 @@ export const ChartIcon = (p: IconProps) => (
     <path d="m7 15 4-4 3 3 5-6" />
   </Svg>
 );
+
+export const PhotoCheckIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 8h3l1.5-2h7L17 8h3v11H4Z" />
+    <circle cx="12" cy="13" r="3.2" />
+    <path d="m17.5 17 1.4 1.4 2.6-2.8" />
+  </Svg>
+);

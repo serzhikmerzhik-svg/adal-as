@@ -140,7 +140,7 @@ export function PhotoFeedCard({
       </div>
 
       {error && !data ? (
-        <p className="mt-4 text-sm text-bad-600">Фотоларды жүктеу мүмкін болмады. 5 секундтан кейін қайта көреді.</p>
+        <p className="mt-4 text-sm text-bad-700">Фотоларды жүктеу мүмкін болмады. 5 секундтан кейін қайта көреді.</p>
       ) : list.length === 0 ? (
         <p className="mt-4 rounded-lg bg-page px-4 py-6 text-center text-sm text-muted">
           {filter === "flagged"

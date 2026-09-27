@@ -36,7 +36,7 @@ function FocusController({ focus }: { focus?: MapFocus | null }) {
 /** 2GIS кілті жоқ кезде қолданылатын OpenStreetMap картасы. */
 export function LeafletMap({ schools, basePath, focus, controls = true }: SchoolMapProps) {
   return (
-    <MapContainer center={[AKTAU_VIEW.lat, AKTAU_VIEW.lng]} zoom={AKTAU_VIEW.zoom} className="h-full w-full rounded-lg isolate">
+    <MapContainer center={[AKTAU_VIEW.lat, AKTAU_VIEW.lng]} zoom={AKTAU_VIEW.zoom} className="map-dark h-full w-full rounded-lg isolate">
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

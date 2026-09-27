@@ -10,9 +10,9 @@ export const RISK_COMPONENT_LABELS: Record<string, string> = {
 
 export const LEVEL_LABEL: Record<string, string> = { GREEN: "Жасыл", YELLOW: "Сары", RED: "Қызыл" };
 export const LEVEL_BADGE: Record<string, string> = {
-  GREEN: "bg-brand-100 text-brand-700",
-  YELLOW: "bg-amber-100 text-amber-700",
-  RED: "bg-red-100 text-red-700",
+  GREEN: "bg-ok-100 text-ok-700",
+  YELLOW: "bg-warn-100 text-warn-700",
+  RED: "bg-bad-100 text-bad-700",
 };
 
 export const SYMPTOM_LABELS: Record<string, string> = {

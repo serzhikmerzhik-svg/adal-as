@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { THEME } from "@/lib/theme";
 import type { Stats } from "./types";
 import { dayMonth } from "@/lib/format";
 
@@ -22,19 +23,20 @@ export function DynamicsCard({ dynamics }: { dynamics: Stats["dynamics"] }) {
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
-            <CartesianGrid stroke="#e8eef5" vertical={false} />
+            <CartesianGrid stroke={THEME.grid} vertical={false} />
             <XAxis
               dataKey="label"
               fontSize={11}
+              tick={{ fill: THEME.tick }}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
               ticks={[data[0]?.label, data[data.length - 1]?.label].filter(Boolean) as string[]}
             />
-            <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
-            <Tooltip formatter={(value, name) => [value, name === "yellow" ? "Сары" : "Қызыл"]} />
-            <Line type="linear" dataKey="yellow" stroke="#e0a526" strokeWidth={2} dot={false} isAnimationActive />
-            <Line type="linear" dataKey="red" stroke="#c62828" strokeWidth={2} dot={{ r: 0 }} activeDot={{ r: 4 }} />
+            <YAxis allowDecimals={false} fontSize={11} tick={{ fill: THEME.tick }} tickLine={false} axisLine={false} />
+            <Tooltip {...THEME.tooltip} formatter={(value, name) => [value, name === "yellow" ? "Сары" : "Қызыл"]} />
+            <Line type="linear" dataKey="yellow" stroke={THEME.yellow} strokeWidth={2} dot={false} isAnimationActive />
+            <Line type="linear" dataKey="red" stroke={THEME.red} strokeWidth={2} dot={{ r: 0 }} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -1,65 +1,87 @@
 @import "tailwindcss";
 
 /*
- * Дизайн жүйесі (командалық макет): ақ карточкалар, ашық сұр-көк фон, көк негізгі түс.
- * Жасыл/сары/қызыл — тек мәртебе үшін және әрқашан мәтінмен бірге. Уақыт пен сандар — Plex Mono.
+ * Дизайн жүйесі: «бақылау орталығы» — күңгірт тақырып (UI UX Pro Max, design-system/adal-as/MASTER.md).
+ * Негізгі түс — көгілдір, мәртебелер жасыл/сары/қызыл және әрқашан мәтінмен бірге.
+ * Контраст (WCAG AA): мәтін/карточка 14:1, бәсең мәтін 6.5:1, көгілдір батырмадағы қара мәтін 10:1,
+ * қызыл белгідегі ақ мәтін 4.8:1. Шкаладағы 50/100 — күңгірт реңк фон, 700 — сол түстің мәтіні.
  */
 @theme inline {
   --font-sans: var(--font-plex-sans);
   --font-mono: var(--font-plex-mono);
 
-  --color-primary: #1463d8;
-  --color-primary-hover: #0f4fb0;
-  --color-primary-soft: #eaf2fd;
-  --color-page: #f3f6fa;
-  --color-line: #dce3ec;
-  --color-line-strong: #c9d3e0;
-  --color-subtle: #e8eef5;
-  --color-ink: #14213d;
-  --color-ink-2: #33415c;
-  --color-muted: #5b6b7f;
-  --color-navy: #0e2a4f;
+  --color-primary: #22d3ee;
+  --color-primary-hover: #67e8f9;
+  --color-primary-soft: #0e2e3a;
+  --color-on-primary: #041219;
+  --color-page: #0a1120;
+  --color-surface: #111a2e;
+  --color-surface-2: #16223a;
+  --color-line: #22304a;
+  --color-line-strong: #33415e;
+  --color-subtle: #1a2640;
+  --color-ink: #e6edf7;
+  --color-ink-2: #c3cedd;
+  --color-muted: #8fa0b8;
+  --color-navy: #0b1a33;
 
   /* Жасыл деңгей */
-  --color-ok-50: #e2f3e9;
-  --color-ok-100: #e2f3e9;
-  --color-ok-500: #2e8b57;
-  --color-ok-600: #2e8b57;
-  --color-ok-700: #1d5e3a;
+  --color-ok-50: #0f2a1d;
+  --color-ok-100: #123524;
+  --color-ok-500: #22c55e;
+  --color-ok-600: #22c55e;
+  --color-ok-700: #4ade80;
 
   /* Сары деңгей */
-  --color-warn-50: #fdf5e0;
-  --color-warn-100: #fbebc4;
-  --color-warn-500: #e0a526;
-  --color-warn-600: #c98a10;
-  --color-warn-700: #6b4a0c;
+  --color-warn-50: #2a2112;
+  --color-warn-100: #3a2d10;
+  --color-warn-500: #f59e0b;
+  --color-warn-600: #d97706;
+  --color-warn-700: #fbbf24;
 
   /* Қызыл деңгей */
-  --color-bad-50: #fff5f4;
-  --color-bad-100: #fde4e1;
-  --color-bad-300: #f0b8b2;
-  --color-bad-600: #c62828;
-  --color-bad-700: #9b1c12;
+  --color-bad-50: #2a1215;
+  --color-bad-100: #3a1518;
+  --color-bad-300: #7f1d1d;
+  --color-bad-600: #dc2626;
+  --color-bad-700: #f87171;
+  --color-bad-800: #b91c1c;
 
   /* Ескі класс атаулары: brand = жасыл мәртебе. */
-  --color-brand-50: #e2f3e9;
-  --color-brand-100: #e2f3e9;
-  --color-brand-500: #2e8b57;
-  --color-brand-600: #2e8b57;
-  --color-brand-700: #1d5e3a;
-  --color-brand-800: #1d5e3a;
+  --color-brand-50: #0f2a1d;
+  --color-brand-100: #123524;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #22c55e;
+  --color-brand-700: #4ade80;
+  --color-brand-800: #4ade80;
 }
 
+:root {
+  color-scheme: dark;
+}
+
+/* Бақылау орталығының торы: фонда әлсіз сызықтар, мазмұнға кедергі келтірмейді. */
 body {
-  background: var(--color-page);
+  background-color: var(--color-page);
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
   color: var(--color-ink);
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.35);
+  color: #ffffff;
 }
 
 @layer components {
   .card {
-    background: #ffffff;
+    background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: 12px;
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
   /* Батырма биіктігі кемінде 44 px (телефонда саусақпен басу); кестедегі ықшам түрі — 36 px. */
   .btn {
@@ -88,7 +110,7 @@ body {
   }
   .btn-primary {
     background: var(--color-primary);
-    color: #ffffff;
+    color: var(--color-on-primary);
     border: 1px solid var(--color-primary);
   }
   .btn-primary:hover:not(:disabled) {
@@ -96,7 +118,7 @@ body {
     border-color: var(--color-primary-hover);
   }
   .btn-outline {
-    background: #ffffff;
+    background: var(--color-surface-2);
     color: var(--color-ink);
     border: 1px solid var(--color-line-strong);
   }
@@ -105,20 +127,35 @@ body {
     color: var(--color-primary);
   }
   .btn-danger {
-    background: #ffffff;
+    background: var(--color-bad-50);
     color: var(--color-bad-700);
     border: 1px solid var(--color-bad-300);
   }
   .btn-danger:hover:not(:disabled) {
-    background: var(--color-bad-50);
+    background: var(--color-bad-100);
+    border-color: var(--color-bad-700);
+  }
+  /* Сары батырма: сары фонда ақ мәтін контрастқа жетпейді, сондықтан қара мәтін. */
+  .btn-warn {
+    background: var(--color-warn-500);
+    color: #1a1206;
+    border: 1px solid var(--color-warn-500);
+  }
+  .btn-warn:hover:not(:disabled) {
+    background: var(--color-warn-700);
+    border-color: var(--color-warn-700);
   }
   .field {
     width: 100%;
-    background: #ffffff;
+    background: #0d1627;
+    color: var(--color-ink);
     border: 1px solid var(--color-line-strong);
     border-radius: 8px;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
+  }
+  .field::placeholder {
+    color: var(--color-muted);
   }
   .field:focus {
     outline: none;
@@ -140,10 +177,10 @@ body {
     color: var(--color-muted);
   }
   .seg > button[aria-pressed="true"] {
-    background: #ffffff;
-    color: var(--color-ink);
+    background: var(--color-surface-2);
+    color: var(--color-primary);
     font-weight: 600;
-    box-shadow: 0 1px 2px rgba(20, 33, 61, 0.08);
+    box-shadow: inset 0 0 0 1px var(--color-line-strong);
   }
   .table-head {
     font-size: 0.75rem;
@@ -203,8 +240,8 @@ body {
 }
 .tile:hover {
   transform: translateY(-3px);
-  border-color: var(--color-line-strong);
-  box-shadow: 0 10px 24px -14px rgba(20, 33, 61, 0.28);
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: 0 14px 30px -18px rgba(34, 211, 238, 0.45);
 }
 .marker-red-pulse {
   animation: red-pulse 1.6s ease-out infinite;
@@ -237,10 +274,10 @@ body {
 }
 .map-pin.kind-CANTEEN .map-dot { border-radius: 3px; }
 .map-pin.kind-KINDERGARTEN .map-dot { border-width: 3px; }
-.map-pin.level-GREEN .map-dot { background: #2e8b57; width: 12px; height: 12px; margin: 2px; }
-.map-pin.level-YELLOW .map-dot { background: #e0a526; }
+.map-pin.level-GREEN .map-dot { background: #22c55e; width: 12px; height: 12px; margin: 2px; }
+.map-pin.level-YELLOW .map-dot { background: #f59e0b; }
 .map-pin.level-RED .map-dot {
-  background: #c62828;
+  background: #ef4444;
   animation: dot-pulse 1.6s ease-out infinite;
 }
 .map-label {
@@ -253,13 +290,14 @@ body {
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(10, 17, 32, 0.92);
   color: var(--color-ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--color-line-strong);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   pointer-events: none;
 }
-.map-pin.level-RED .map-label { color: #951e17; }
-.map-pin.level-YELLOW .map-label { color: #6d5108; }
+.map-pin.level-RED .map-label { color: #fca5a5; }
+.map-pin.level-YELLOW .map-label { color: #fcd34d; }
 .map-bubble {
   display: flex;
   align-items: center;
@@ -267,7 +305,7 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 9999px;
-  background: #ffffff;
+  background: var(--color-surface);
   border: 2px solid var(--color-primary);
   color: var(--color-primary);
   font-weight: 700;
@@ -307,7 +345,7 @@ body {
     padding: 0.25rem 0.75rem;
     border-radius: 999px;
     border: 1px solid var(--color-line-strong);
-    background: #ffffff;
+    background: var(--color-surface-2);
     color: var(--color-ink-2);
     font-size: 0.8125rem;
     line-height: 1.2;
@@ -324,7 +362,8 @@ body {
   .chip[aria-pressed="true"] {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    color: #ffffff;
+    color: var(--color-on-primary);
+    font-weight: 600;
   }
   .chip-count {
     font-family: var(--font-mono);
@@ -332,7 +371,7 @@ body {
     color: var(--color-muted);
   }
   .chip[aria-pressed="true"] .chip-count {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(4, 18, 25, 0.75);
   }
 }
 
@@ -362,4 +401,11 @@ body {
       font-size: 16px;
     }
   }
+}
+
+/* Карта күңгірт тақырыпта: тек тайлдар (canvas / Leaflet тайлдары) инверсияланады,
+   HTML-маркерлер, жазулар мен 2GIS логотипі өз түсінде қалады. */
+.map-dark canvas,
+.map-dark .leaflet-tile-pane {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.55) brightness(0.95) contrast(0.92);
 }

@@ -4,9 +4,9 @@ import { prisma } from "@/lib/db/prisma";
 import { FACILITY_KIND_LABEL } from "@/lib/risk/labels";
 import { parseModelVerdict, type ModelVerdict, type PhotoIssue } from "./verdict";
 
-// ИИ OpenAI-үйлесімді кез келген шлюз арқылы шақырылады. Әдепкі жоспар — OmniRoute
-// (AI_BASE_URL=http://localhost:20128/v1, AI_MODEL — суретті түсінетін модель). AI_BASE_URL
-// берілмесе, ИИ өшірулі: тек қайталанған фото тексеріледі, нәтиже «ИИ қосылмаған» болады.
+// ИИ OpenAI-үйлесімді кез келген API арқылы шақырылады: Google Gemini
+// (AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai) немесе жергілікті шлюз.
+// Мекенжай не кілт берілмесе, ИИ өшірулі: тек қайталанған фото тексеріледі, нәтиже «ИИ қосылмаған».
 const AI_TIMEOUT_MS = 45_000;
 
 const SYSTEM_PROMPT = `You review photos of served food portions for the sanitary-epidemiological service (SES) in Aktau, Kazakhstan.
@@ -38,8 +38,10 @@ async function loadImage(photoUrl: string): Promise<LoadedImage> {
 
 function aiConfig() {
   const baseUrl = process.env.AI_BASE_URL?.replace(/\/+$/, "");
-  if (!baseUrl) return null;
-  return { baseUrl, model: process.env.AI_MODEL || "auto", apiKey: process.env.AI_API_KEY };
+  const apiKey = process.env.AI_API_KEY || undefined;
+  // Қашықтағы API кілтсіз жауап бермейді: кілт қойылғанша ИИ өшірулі деп саналады (қате емес).
+  if (!baseUrl || (!apiKey && !/^https?:\/\/(localhost|127\.0\.0\.1)[:/]/.test(`${baseUrl}/`))) return null;
+  return { baseUrl, model: process.env.AI_MODEL || "gemini-3.8-flash", apiKey };
 }
 
 /** Chat Completions жауабындағы мәтін: кейбір провайдерлер content-ті бөліктер массиві ретінде қайтарады. */

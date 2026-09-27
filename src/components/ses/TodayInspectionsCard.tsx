@@ -122,7 +122,7 @@ export function TodayInspectionsCard({
           const urgent = !i.doneAt && i.school.riskLevel === "RED";
           return (
             <div key={i.id} className="grid grid-cols-[52px_1fr] gap-3">
-              <span className={`font-mono text-sm ${urgent ? "text-bad-600 font-medium" : "text-muted"}`}>{hm(i.plannedAt)}</span>
+              <span className={`font-mono text-sm ${urgent ? "text-bad-700 font-medium" : "text-muted"}`}>{hm(i.plannedAt)}</span>
               <div>
                 <p className="text-sm font-semibold text-ink" title={i.school.name}>
                   {shortName(i.school.name, i.school.kind)} · {TYPE_TEXT[i.type]}
@@ -150,8 +150,8 @@ export function TodayInspectionsCard({
           <p className="text-xl font-semibold tabular-nums text-ink">{prescriptions.submitted}</p>
         </div>
         <div>
-          <p className={`text-xs ${prescriptions.overdue > 0 ? "text-bad-600" : "text-muted"}`}>Мерзімі өткен</p>
-          <p className={`text-xl font-semibold tabular-nums ${prescriptions.overdue > 0 ? "text-bad-600" : "text-ink"}`}>
+          <p className={`text-xs ${prescriptions.overdue > 0 ? "text-bad-700" : "text-muted"}`}>Мерзімі өткен</p>
+          <p className={`text-xl font-semibold tabular-nums ${prescriptions.overdue > 0 ? "text-bad-700" : "text-ink"}`}>
             {prescriptions.overdue}
           </p>
         </div>

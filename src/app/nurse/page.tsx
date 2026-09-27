@@ -78,7 +78,7 @@ export default function NursePage() {
                   className={`rounded-xl py-3 text-sm font-medium border ${
                     symptoms.includes(key)
                       ? "bg-bad-600 text-white border-bad-600"
-                      : "bg-white text-ink border-line-strong"
+                      : "bg-surface text-ink border-line-strong"
                   }`}
                 >
                   {label}
@@ -92,7 +92,7 @@ export default function NursePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="btn w-full py-3.5 bg-bad-600 text-white border border-bad-600 hover:bg-bad-700 text-base"
+            className="btn w-full py-3.5 bg-bad-600 text-white border border-bad-600 hover:bg-bad-800 text-base"
           >
             {submitting ? "Тіркелуде..." : "Тіркеу"}
           </button>

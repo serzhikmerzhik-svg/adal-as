@@ -171,7 +171,7 @@ export function DgisMap({ schools, basePath, focus, controls = true, apiKey }: S
   }
 
   return (
-    <div className="relative h-full w-full rounded-lg overflow-hidden isolate">
+    <div className="map-dark relative h-full w-full rounded-lg overflow-hidden isolate">
       <div ref={containerRef} className="absolute inset-0" />
 
       {controls && (

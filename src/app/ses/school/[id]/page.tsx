@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, use as usePromise } from "react";
 import useSWR from "swr";
 import QRCode from "qrcode";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { THEME } from "@/lib/theme";
 import { AppHeader } from "@/components/AppHeader";
 import { dateTime, ddmm, fullDate } from "@/lib/format";
 import {
@@ -35,7 +36,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
   }, [data]);
 
   if (!data) return <div className="p-6 text-center text-muted">Жүктелуде...</div>;
-  if (data.error) return <div className="p-6 text-center text-bad-600">{data.error}</div>;
+  if (data.error) return <div className="p-6 text-center text-bad-700">{data.error}</div>;
 
   const { school, latestComponents, riskHistory, kitchenLogs, symptomReports, feedback, inspections, prescriptions } = data;
 
@@ -118,11 +119,11 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e8eef5" />
-                <XAxis dataKey="date" fontSize={11} />
-                <YAxis domain={[0, 100]} fontSize={11} />
-                <Tooltip />
-                <Line type="monotone" dataKey="score" stroke="#1463d8" strokeWidth={2} dot={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={THEME.grid} />
+                <XAxis dataKey="date" fontSize={11} tick={{ fill: THEME.tick }} />
+                <YAxis domain={[0, 100]} fontSize={11} tick={{ fill: THEME.tick }} />
+                <Tooltip {...THEME.tooltip} />
+                <Line type="monotone" dataKey="score" stroke={THEME.primary} strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -196,7 +197,7 @@ export default function SchoolDetailPage({ params }: { params: Promise<{ id: str
             {kitchenLogs.map((l: { id: string; type: string; valueC: number | null; isViolation: boolean; createdAt: string; menuItem: { name: string } | null }) => (
               <div key={l.id} className="text-xs flex justify-between border-b border-line py-1.5">
                 <span>{l.menuItem?.name ?? "—"} · {l.type === "PHOTO" ? "фото" : `${l.valueC}°C`}</span>
-                <span className={l.isViolation ? "text-bad-600 font-semibold" : "text-muted"}>
+                <span className={l.isViolation ? "text-bad-700 font-semibold" : "text-muted"}>
                   {dateTime(l.createdAt)}
                 </span>
               </div>

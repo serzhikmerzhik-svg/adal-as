@@ -86,7 +86,7 @@ export function LoginForm({ initialLogin }: { initialLogin?: string }) {
           />
         </label>
 
-        {error && <p className="anim-slide-in text-sm text-bad-600">{error}</p>}
+        {error && <p className="anim-slide-in text-sm text-bad-700">{error}</p>}
 
         <button type="submit" disabled={loading} className="btn btn-primary w-full !py-2.5">
           {loading ? "Кіру..." : "Кіру"}

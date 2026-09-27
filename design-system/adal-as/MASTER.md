@@ -17,26 +17,26 @@
 
 ### Color Palette
 
-UI UX Pro Max ұсынысы — «high contrast navy + blue» (#0F172A / #0369A1). Жобада команданың сол
-бағыттағы палитрасы қолданылады (`src/app/globals.css`, `@theme inline`), контраст тексерілген:
+Команда таңдаған бағыт — «бақылау орталығы» (күңгірт тақырып, батылдық 4/5). Токендер
+`src/app/globals.css` ішінде (`@theme inline`), SVG/графиктерге арналған көшірмесі — `src/lib/theme.ts`.
+Контраст WCAG AA бойынша тексерілген:
 
 | Role | Hex | CSS Variable | Контраст |
 |------|-----|--------------|----------|
-| Primary / CTA | `#1463D8` | `--color-primary` | ақ мәтінмен 5.5:1 |
-| Primary hover | `#0F4FB0` | `--color-primary-hover` | |
-| Primary soft | `#EAF2FD` | `--color-primary-soft` | |
-| Navy (тақырыптар) | `#0E2A4F` | `--color-navy` | |
-| Background | `#F3F6FA` | `--color-page` | |
-| Card | `#FFFFFF` | — | |
-| Foreground | `#14213D` | `--color-ink` | ақ фонда 15:1 |
-| Secondary text | `#33415C` | `--color-ink-2` | |
-| Muted text | `#5B6B7F` | `--color-muted` | ақта 5.4:1, фонда 5.0:1 |
-| Border | `#DCE3EC` / `#C9D3E0` | `--color-line` / `--color-line-strong` | |
-| Жасыл (OK) | `#2E8B57` | `--color-ok-600` | |
-| Сары (ескерту) | `#E0A526` | `--color-warn-500` | мәтін үшін `--color-warn-700` |
-| Қызыл (қауіп) | `#C62828` | `--color-bad-600` | ақ мәтінмен 5.6:1 |
+| Page background | `#0A1120` | `--color-page` | әлсіз тор сызығымен |
+| Card / surface | `#111A2E` | `--color-surface` | |
+| Surface 2 (өріс, батырма) | `#16223A` | `--color-surface-2` | |
+| Border | `#22304A` / `#33415E` | `--color-line` / `--color-line-strong` | |
+| Foreground | `#E6EDF7` | `--color-ink` | карточкада 14:1 |
+| Muted text | `#8FA0B8` | `--color-muted` | карточкада 6.5:1 |
+| Primary / CTA | `#22D3EE` | `--color-primary` | үстіндегі `#041219` мәтін 10:1 |
+| Жасыл (OK) | `#22C55E`, мәтін `#4ADE80` | `--color-ok-600` / `-700` | мәтін 9.9:1 |
+| Сары (ескерту) | `#F59E0B`, мәтін `#FBBF24` | `--color-warn-500` / `-700` | мәтін 10:1; сары батырмада қара мәтін |
+| Қызыл (қауіп) | `#DC2626`, мәтін `#F87171` | `--color-bad-600` / `-700` | ақ мәтінмен 4.8:1, мәтін 6.3:1 |
 
 Түс ешқашан жалғыз белгі емес: деңгей әрдайым мәтінмен («Жасыл/Сары/Қызыл») немесе пішінмен қайталанады.
+Карта тайлдары CSS сүзгісімен күңгірттеледі (`.map-dark`), маркерлер өз түсінде қалады.
+Басты бет пен кіру беті: Unsplash фотосы (Pylyp Sukhenko), сол жағы градиентпен күңгірттеліп, мәтін оқылады.
 
 ### Typography
 

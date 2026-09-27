@@ -19,14 +19,14 @@ function Kpi({
 }) {
   return (
     <div
-      className={`anim-fade-up rounded-xl border px-5 py-4 ${alarm ? "border-bad-300 bg-bad-50" : "border-line bg-white"}`}
+      className={`anim-fade-up rounded-xl border px-5 py-4 ${alarm ? "border-bad-300 bg-bad-50" : "border-line bg-surface"}`}
       style={{ animationDelay: `${delay}ms` }}
     >
       <p className={`flex items-center gap-2 text-sm ${alarm ? "font-semibold text-bad-700" : "text-muted"}`}>
         {dot && <LevelDot level={dot} />}
         {label}
       </p>
-      <p className={`mt-1 text-4xl font-semibold tabular-nums ${alarm ? "text-bad-600" : "text-ink"}`}>{value}</p>
+      <p className={`mt-1 text-4xl font-semibold tabular-nums ${alarm ? "text-bad-700" : "text-ink"}`}>{value}</p>
       <p className={`mt-1 text-xs ${alarm ? "text-bad-700" : "text-muted"}`}>{caption}</p>
     </div>
   );

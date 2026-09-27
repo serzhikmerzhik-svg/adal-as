@@ -55,7 +55,7 @@ export function AppHeader({
     href === "/ses" ? pathname === "/ses" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-line">
+    <header className="sticky top-0 z-50 bg-surface border-b border-line">
       <div className="max-w-[1440px] mx-auto px-4 lg:px-8 h-16 flex items-center gap-4">
         {backHref && (
           <Link href={backHref} className="text-muted hover:text-ink text-xl leading-none" aria-label="Артқа">

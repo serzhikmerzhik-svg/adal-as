@@ -71,7 +71,7 @@ export default function SesOverview() {
 
       <main className="max-w-[1440px] mx-auto px-4 lg:px-8 py-6 space-y-5">
         {overview.error && !data && (
-          <p className="card p-5 text-sm text-bad-600">Деректерді жүктеу мүмкін болмады. Бет 5 секундтан кейін қайта көреді.</p>
+          <p className="card p-5 text-sm text-bad-700">Деректерді жүктеу мүмкін болмады. Бет 5 секундтан кейін қайта көреді.</p>
         )}
         {!data ? (
           <div className="grid gap-5">

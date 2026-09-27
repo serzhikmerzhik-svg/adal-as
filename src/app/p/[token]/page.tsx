@@ -48,11 +48,11 @@ export default function ParentPage({ params }: { params: Promise<{ token: string
   }
 
   if (loading) return <div className="p-6 text-center text-muted">Жүктелуде...</div>;
-  if (error && !schoolName) return <div className="p-6 text-center text-bad-600">{error}</div>;
+  if (error && !schoolName) return <div className="p-6 text-center text-bad-700">{error}</div>;
 
   return (
     <main className="min-h-screen pb-10">
-      <header className="bg-white border-b border-line px-4 py-4 text-center">
+      <header className="bg-surface border-b border-line px-4 py-4 text-center">
         <h1 className="text-xl font-bold text-ink">{schoolName}</h1>
         <p className="text-sm text-muted">Бүгінгі мәзір</p>
       </header>
@@ -92,7 +92,7 @@ export default function ParentPage({ params }: { params: Promise<{ token: string
                 className="field text-sm"
                 rows={2}
               />
-              {error && <p className="text-sm text-bad-600">{error}</p>}
+              {error && <p className="text-sm text-bad-700">{error}</p>}
               <button
                 onClick={submitFeedback}
                 disabled={rating === 0}

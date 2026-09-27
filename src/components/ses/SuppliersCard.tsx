@@ -7,7 +7,7 @@ import type { SupplierRow } from "./types";
 import { fullDate } from "@/lib/format";
 
 function certText(s: SupplierRow) {
-  if (s.certDaysLeft < 0) return <span className="font-semibold text-bad-600">Мерзімі өткен</span>;
+  if (s.certDaysLeft < 0) return <span className="font-semibold text-bad-700">Мерзімі өткен</span>;
   if (s.certDaysLeft <= 30) return <span className="font-semibold text-warn-700">{s.certDaysLeft} күн қалды</span>;
   return <span className="text-muted">Жарамды</span>;
 }
@@ -123,8 +123,8 @@ export function SuppliersCard({
                     <td colSpan={6} className="px-3 py-3">
                       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                         {s.batches.slice(0, 9).map((b) => (
-                          <div key={b.id} className="rounded-md bg-white border border-line px-3 py-2 text-xs">
-                            <span className={`font-mono font-medium ${b.linkedToRed ? "text-bad-600" : "text-ink"}`}>{b.code}</span>{" "}
+                          <div key={b.id} className="rounded-md bg-surface border border-line px-3 py-2 text-xs">
+                            <span className={`font-mono font-medium ${b.linkedToRed ? "text-bad-700" : "text-ink"}`}>{b.code}</span>{" "}
                             · {b.product} · {b.facilities} нысан
                             <span className="block text-muted">
                               Жарамды: {fullDate(b.expiresAt)}

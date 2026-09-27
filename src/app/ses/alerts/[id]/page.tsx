@@ -14,7 +14,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
   const { data, mutate } = useSWR(`/api/ses/alerts/${id}`, fetcher, { refreshInterval: 5000 });
 
   if (!data) return <div className="p-6 text-center text-muted">Жүктелуде...</div>;
-  if (data.error) return <div className="p-6 text-center text-bad-600">{data.error}</div>;
+  if (data.error) return <div className="p-6 text-center text-bad-700">{data.error}</div>;
 
   const { alert, symptomReports, todaysMenu, trace } = data;
 

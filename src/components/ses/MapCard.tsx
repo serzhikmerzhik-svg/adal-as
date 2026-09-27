@@ -123,7 +123,7 @@ export function MapCard({
       <div className="relative mt-3 h-[430px] rounded-lg border border-line overflow-hidden">
         <SchoolMap schools={visible} basePath={basePath} focus={focus} controls={false} />
         {visible.length === 0 && (
-          <p className="absolute inset-x-0 top-3 z-10 mx-auto w-fit rounded-md bg-white/95 px-3 py-1.5 text-sm text-muted shadow-sm">
+          <p className="absolute inset-x-0 top-3 z-10 mx-auto w-fit rounded-md bg-surface/95 px-3 py-1.5 text-sm text-muted shadow-sm">
             Бұл сүзгі бойынша нысан жоқ
           </p>
         )}

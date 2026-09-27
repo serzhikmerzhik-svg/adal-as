@@ -114,7 +114,7 @@ export default function TrainingPage() {
         <section className="card p-4 space-y-1.5 text-sm max-h-64 overflow-y-auto" aria-live="polite">
           {log.length === 0 && <p className="text-muted">Әрекет журналы бос.</p>}
           {log.map((l, i) => (
-            <p key={i} className={l.ok ? "text-ink" : "text-bad-600"}>
+            <p key={i} className={l.ok ? "text-ink" : "text-bad-700"}>
               <span className="font-mono text-xs text-muted mr-2">{l.at}</span>
               {l.text}
             </p>

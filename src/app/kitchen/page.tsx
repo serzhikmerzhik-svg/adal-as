@@ -186,7 +186,7 @@ export default function KitchenPage() {
                   Мерзімі: {fullDate(p.dueAt)} · Статус: {PRESCRIPTION_STATUS_LABEL[p.status] ?? p.status}
                 </p>
                 {p.status === "OPEN" && (
-                  <label className="btn w-full bg-warn-600 text-white border border-warn-600">
+                  <label className="btn btn-warn w-full">
                     {busyId === p.id ? "Жүктелуде..." : "Орындалды (фото-дәлел)"}
                     <input
                       type="file"
@@ -279,7 +279,7 @@ export default function KitchenPage() {
                 className={`card p-4 space-y-3 border ${item.blocked ? "border-bad-300" : "border-line"}`}
               >
                 {item.blocked && (
-                  <p className="text-sm font-bold text-bad-600 bg-bad-50 rounded-lg px-3 py-2">
+                  <p className="text-sm font-bold text-bad-700 bg-bad-50 rounded-lg px-3 py-2">
                     Уақытша берілмесін — СЭС шешімін күтуде
                   </p>
                 )}
@@ -312,6 +312,8 @@ export default function KitchenPage() {
                     }}
                   />
                 </label>
+
+                <p className="text-xs text-muted">Тек табақты түсіріңіз: адамдар, әсіресе балалар кадрға түспесін.</p>
 
                 {lastPhoto?.aiStatus && (
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">

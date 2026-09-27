@@ -69,7 +69,7 @@ export function AlertsPanel({
             <>
               <div className="flex items-center justify-between gap-2">
                 <LevelPill level={a.level} />
-                <span className={`font-mono text-xs ${red && a.status === "OPEN" ? "text-bad-600" : "text-muted"}`}>
+                <span className={`font-mono text-xs ${red && a.status === "OPEN" ? "text-bad-700" : "text-muted"}`}>
                   {relativeTime(a.createdAt)} · {STATUS[a.status]}
                 </span>
               </div>
