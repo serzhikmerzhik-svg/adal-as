@@ -25,7 +25,7 @@
 // ---------- Настройки ----------
 const char* WIFI_SSID = "ИМЯ_СЕТИ";        // на защите можно раздать Wi‑Fi с телефона
 const char* WIFI_PASS = "ПАРОЛЬ_СЕТИ";
-const char* API_URL = "https://ВАШ-САЙТ.vercel.app/api/device/readings";
+const char* API_URL = "https://adal-as.vercel.app/api/device/readings";
 const char* DEVICE_KEY = "adk_...";         // ключ устройства: .env → DEMO_DEVICE_KEY или /kitchen → «Құрылғылар» → «Кілт алу»
 
 const int SENSOR_PIN = 4;   // DS18B20: DATA (жёлтый) → GPIO4, резистор 4,7 кОм между DATA и 3V3
