@@ -1,24 +1,24 @@
-// Порция фотосын тексерудің ортақ бөлігі (клиент пен сервер): себеп кодтары, олардың қазақша
-// атаулары және ИИ жауабын талдау. Сервердегі шақыру — src/lib/photo/check.ts.
+// Порция фотосын тексерудің ортақ бөлігі (клиент пен сервер): себеп кодтары және ИИ жауабын талдау.
+// Кодтардың атаулары сөздікте (t.photoIssues). Сервердегі шақыру — src/lib/photo/check.ts.
 
-export const PHOTO_ISSUE_LABEL = {
-  NOT_FOOD: "Фотода тағам жоқ",
-  NO_PORTION: "Порция көрінбейді",
-  PORTION_SMALL: "Порция нормадан аз",
-  DISH_MISMATCH: "Мәзірдегі тағам емес",
-  BLURRY: "Фото анық емес",
-  SCREEN_OR_STOCK: "Экраннан не интернеттен алынған",
-  HYGIENE: "Гигиена бойынша күмән",
-  SPOILED: "Тағам сапасы күмәнді",
-  DUPLICATE: "Бұл фото бұрын жүктелген",
-} as const;
+export const PHOTO_ISSUES = [
+  "NOT_FOOD",
+  "NO_PORTION",
+  "PORTION_SMALL",
+  "DISH_MISMATCH",
+  "BLURRY",
+  "SCREEN_OR_STOCK",
+  "HYGIENE",
+  "SPOILED",
+  "DUPLICATE",
+] as const;
 
-export type PhotoIssue = keyof typeof PHOTO_ISSUE_LABEL;
+export type PhotoIssue = (typeof PHOTO_ISSUES)[number];
 
 /** Бұдан аз порция күмәнді саналады (стандарттың пайызы). */
 export const PORTION_MIN_PCT = 80;
 
-const ISSUE_CODES = new Set(Object.keys(PHOTO_ISSUE_LABEL));
+const ISSUE_CODES = new Set<string>(PHOTO_ISSUES);
 
 export type ModelVerdict = { issues: PhotoIssue[]; portionPct: number | null; note: string | null };
 
@@ -48,6 +48,7 @@ export function parseModelVerdict(raw: string): ModelVerdict {
   return { issues: Array.from(issues), portionPct, note };
 }
 
-export function issueLabels(issues: string[]) {
-  return issues.map((i) => PHOTO_ISSUE_LABEL[i as PhotoIssue] ?? i);
+/** Себеп кодтарын таңдалған тілдің атауларымен (t.photoIssues) ауыстырады. */
+export function issueLabels(issues: string[], labels: Record<string, string>) {
+  return issues.map((i) => labels[i] ?? i);
 }

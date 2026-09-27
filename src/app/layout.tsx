@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { I18nProvider } from "@/i18n/client";
+import { getLocale, getT } from "@/i18n/server";
 import "./globals.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -13,15 +15,18 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
-export const metadata: Metadata = {
-  title: "Adal As",
-  description: "Асханалар мен СЭС арасындағы ерте ескерту жүйесі",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: "Adal As", description: t.meta.description };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
   return (
-    <html lang="kk" className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+    <html lang={locale} className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans">
+        <I18nProvider locale={locale}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

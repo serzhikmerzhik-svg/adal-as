@@ -8,7 +8,7 @@ export async function GET() {
   if (!session?.schoolId) return NextResponse.json({ error: "Мектеп табылмады" }, { status: 400 });
 
   const [school, menuItems, prescriptions, suppliers] = await Promise.all([
-    prisma.school.findUnique({ where: { id: session.schoolId }, select: { name: true, kind: true } }),
+    prisma.school.findUnique({ where: { id: session.schoolId }, select: { name: true, kind: true, code: true } }),
     prisma.menuItem.findMany({
       where: { schoolId: session.schoolId, date: todayDate() },
       include: {

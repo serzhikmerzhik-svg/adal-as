@@ -17,7 +17,8 @@ Answer ONLY with one JSON object, no other text:
 - issues: zero or more of NOT_FOOD, NO_PORTION, PORTION_SMALL, DISH_MISMATCH, BLURRY, SCREEN_OR_STOCK, HYGIENE, SPOILED.
   PORTION_SMALL when portion_pct < 80. SCREEN_OR_STOCK when it looks like a photo of a screen, an advertising/stock image or a drawing instead of a real plate. HYGIENE only for visible problems (dirt, hair, insects, dirty dishes).
 - note: one short sentence in Kazakh explaining the decision.
-Be strict but fair: ordinary lighting, angle or plating differences are not issues.`;
+Be strict but fair: ordinary lighting, angle or plating differences are not issues.
+The app itself adds a dark band at the bottom ("Adal As · <facility code> · <date time>" and a token id), and a printed QR stand is placed next to the plate on purpose. Both are expected: never treat them as a screen, stock image or any other issue.`;
 
 type LoadedImage = { bytes: Buffer; mediaType: string; dataUrl: string };
 

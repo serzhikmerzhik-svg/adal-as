@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isOwnPhotoUrl } from "@/lib/capture";
+import { getT } from "@/i18n/server";
 
 const bodySchema = z.object({
   dataUrl: z.string().min(1),
@@ -9,8 +11,12 @@ const bodySchema = z.object({
 // BLOB_READ_WRITE_TOKEN бар болса, Vercel Blob-қа жүктейді. Болмаса, клиентте
 // сығылған data URL-ды сол қалпында қайтарады (ол тікелей KitchenLog.photoUrl-ға жазылады).
 export async function POST(request: Request) {
+  const t = await getT();
   const parsed = bodySchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: "Дұрыс емес деректер" }, { status: 400 });
+  // Тек камера экраны жасаған сығылған JPEG/PNG/WebP қабылданады.
+  if (!parsed.success || !parsed.data.dataUrl.startsWith("data:") || !isOwnPhotoUrl(parsed.data.dataUrl)) {
+    return NextResponse.json({ error: t.api.invalid }, { status: 400 });
+  }
   const { dataUrl, filename } = parsed.data;
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -18,11 +24,11 @@ export async function POST(request: Request) {
   }
 
   const { put } = await import("@vercel/blob");
-  const base64 = dataUrl.split(",")[1] ?? dataUrl;
-  const buffer = Buffer.from(base64, "base64");
-  const blob = await put(`kitchen/${Date.now()}-${filename}`, buffer, {
+  const buffer = Buffer.from(dataUrl.split(",")[1], "base64");
+  const blob = await put(`kitchen/${Date.now()}-${filename.replace(/[^\w.-]/g, "")}`, buffer, {
     access: "public",
-    contentType: "image/jpeg",
+    contentType: dataUrl.slice(5, dataUrl.indexOf(";")),
+    addRandomSuffix: true,
   });
 
   return NextResponse.json({ url: blob.url });

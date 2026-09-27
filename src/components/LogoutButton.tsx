@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useT } from "@/i18n/client";
 
 export function LogoutButton() {
   const router = useRouter();
+  const t = useT();
   return (
     <button
       onClick={async () => {
@@ -13,7 +15,7 @@ export function LogoutButton() {
       }}
       className="btn btn-outline"
     >
-      Шығу
+      {t.common.logout}
     </button>
   );
 }

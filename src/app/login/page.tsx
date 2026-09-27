@@ -1,20 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getT } from "@/i18n/server";
 import { Logo } from "@/components/Logo";
 import { LoginForm } from "@/components/LoginForm";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import heroChef from "../../../public/img/hero-chef.jpg";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { as } = await searchParams;
+  const [{ as }, t] = await Promise.all([searchParams, getT()]);
   const initialLogin = typeof as === "string" ? as : undefined;
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="flex flex-col">
-        <header className="px-4 sm:px-8 h-16 flex items-center">
-          <Link href="/" aria-label="Басты бет">
+        <header className="px-4 sm:px-8 h-16 flex items-center justify-between gap-3">
+          <Link href="/" aria-label={t.common.home}>
             <Logo />
           </Link>
+          <LanguageSwitcher />
         </header>
 
         {/* Телефонда фото форманың үстіндегі жолақ, үлкен экранда оң жақтағы жартысы. */}
@@ -31,7 +34,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <aside className="relative hidden lg:block isolate overflow-hidden border-l border-line">
         <Image
           src={heroChef}
-          alt="Асхана ас үйінде тағам дайындап жатқан аспазшы"
+          alt={t.landing.heroAlt}
           placeholder="blur"
           fill
           sizes="55vw"
@@ -45,15 +48,14 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="absolute inset-x-0 bottom-0 p-10 xl:p-14">
           <p className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-surface/70 px-3 py-1 text-xs text-ink-2 backdrop-blur">
             <i aria-hidden="true" className="anim-live inline-block h-2 w-2 rounded-full bg-ok-500" />
-            Ақтау · бақылау орталығы
+            {t.login.asideBadge}
           </p>
           <p className="mt-4 max-w-lg text-3xl xl:text-4xl font-semibold leading-tight text-ink">
-            Әр порция — <span className="text-primary">бақылауда</span>
+            {t.landing.titleStart}
+            <span className="text-primary">{t.landing.titleAccent}</span>
           </p>
-          <p className="mt-3 max-w-md text-ink-2">
-            Асхана, медбике және СЭС бір жүйеде: фото, температура, белгілер және тәуекел картасы.
-          </p>
-          <p className="mt-8 text-[11px] text-muted">Фото: Pylyp Sukhenko / Unsplash</p>
+          <p className="mt-3 max-w-md text-ink-2">{t.login.asideText}</p>
+          <p className="mt-8 text-[11px] text-muted">{t.common.photoCredit}</p>
         </div>
       </aside>
     </div>

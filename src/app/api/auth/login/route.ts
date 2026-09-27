@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { signSession, SESSION_COOKIE } from "@/lib/auth/jwt";
+import { getT } from "@/i18n/server";
 
 const bodySchema = z.object({
   login: z.string().min(1),
@@ -18,15 +19,16 @@ const ROLE_HOME: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+  const t = await getT();
   const parsed = bodySchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Дұрыс емес деректер" }, { status: 400 });
+    return NextResponse.json({ error: t.api.invalid }, { status: 400 });
   }
 
   const { login, password } = parsed.data;
   const user = await prisma.user.findUnique({ where: { login } });
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return NextResponse.json({ error: "Логин немесе құпиясөз қате" }, { status: 401 });
+    return NextResponse.json({ error: t.api.badLogin }, { status: 401 });
   }
 
   const token = await signSession({

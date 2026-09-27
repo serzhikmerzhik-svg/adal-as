@@ -263,3 +263,18 @@ model Prescription {
   submittedAt      DateTime?
   decidedAt        DateTime?
 }
+
+// Камерадан түсіруге арналған бір реттік токен: сервер 2 минутқа береді, фото жүктелгенде өшеді.
+// Геолокация токен берілгенде тексеріледі; нысан коды мен сервер уақыты су белгісіне жазылады.
+model CaptureToken {
+  id        String    @id // кездейсоқ 24 байт, base64url
+  schoolId  String
+  purpose   String // PORTION | PROOF
+  targetId  String // мәзірдегі тағам не нұсқама
+  distanceM Int?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([schoolId, createdAt])
+}

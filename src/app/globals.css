@@ -409,3 +409,10 @@ body {
 .map-dark .leaflet-tile-pane {
   filter: invert(0.92) hue-rotate(180deg) saturate(0.55) brightness(0.95) contrast(0.92);
 }
+
+/* QR-тұғырды басып шығару: қағазда күңгірт фон мен тор болмайды. */
+@media print {
+  body {
+    background: #fff !important;
+  }
+}
