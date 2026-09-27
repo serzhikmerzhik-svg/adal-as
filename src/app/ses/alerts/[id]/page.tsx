@@ -76,9 +76,10 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
         {symptomReports.length > 0 && (
           <section className="card space-y-1 p-4">
             <h2 className="mb-2 font-bold text-ink">{a.symptomsTitle}</h2>
-            {symptomReports.map((r: { id: string; grade: string; symptoms: string[]; reportedAt: string }) => (
+            {symptomReports.map((r: { id: string; grade: string; symptoms: string[]; otherNote: string | null; reportedAt: string }) => (
               <p key={r.id} className="text-sm text-ink">
-                {a.grade(r.grade)} · {r.symptoms.map((s) => t.symptoms[s] ?? s).join(", ")} · {hm(r.reportedAt)}
+                {a.grade(r.grade)} · {r.symptoms.map((s) => t.symptoms[s] ?? s).join(", ")}
+                {r.otherNote ? ` (${r.otherNote})` : ""} · {hm(r.reportedAt)}
               </p>
             ))}
           </section>

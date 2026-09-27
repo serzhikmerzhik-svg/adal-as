@@ -225,14 +225,20 @@ model KitchenLog {
   @@index([photoHash])
 }
 
+// Медбикенің тіркеуі. Баланың аты-жөнін тек өз мектебінің медбикесі көреді (СЭС — сынып пен белгілерді),
+// ол 30 күннен кейін өшіріледі (cron). Аты-жөні кластерде бір баланы екі рет санамау үшін де керек.
 model SymptomReport {
   id          String    @id @default(cuid())
   schoolId    String
   school      School    @relation(fields: [schoolId], references: [id])
+  studentName String?
   grade       String
   symptoms    Symptom[]
+  otherNote   String? // «Басқа» белгінің сипаттамасы
   reportedAt  DateTime  @default(now())
   createdById String
+
+  @@index([schoolId, reportedAt])
 }
 
 model ParentFeedback {

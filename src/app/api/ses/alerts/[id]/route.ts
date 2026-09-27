@@ -17,9 +17,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const since24h = new Date();
   since24h.setHours(since24h.getHours() - 24);
 
+  // Баланың аты-жөні СЭС-ке берілмейді: ол тек мектеп медбикесінде.
   const symptomReports = await prisma.symptomReport.findMany({
     where: { schoolId: alert.schoolId, reportedAt: { gte: since24h } },
     orderBy: { reportedAt: "desc" },
+    select: { id: true, grade: true, symptoms: true, otherNote: true, reportedAt: true },
   });
 
   const todaysMenu = await prisma.menuItem.findMany({

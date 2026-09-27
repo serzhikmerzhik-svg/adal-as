@@ -31,7 +31,11 @@ export async function checkClusterAndAlert(schoolId: string) {
   });
   const giReports = recentReports.filter((r) => r.symptoms.some((s: Symptom) => GI_SET.has(s)));
 
-  if (giReports.length < CLUSTER.MIN_REPORTS) return null;
+  // Бір баланы медбике бірнеше рет тіркесе де, ол бір рет саналады (аты-жөні мен сыныбы бойынша).
+  const children = new Set(
+    giReports.map((r) => (r.studentName ? `${r.studentName.toLowerCase().replace(/\s+/g, " ").trim()}|${r.grade.toUpperCase()}` : r.id)),
+  );
+  if (children.size < CLUSTER.MIN_REPORTS) return null;
 
   const existingOpenRed = await prisma.alert.findFirst({
     where: { schoolId, level: "RED", createdAt: { gte: hoursAgo(24) }, status: { in: ["OPEN", "ACKNOWLEDGED"] } },
@@ -49,7 +53,7 @@ export async function checkClusterAndAlert(schoolId: string) {
     data: {
       schoolId,
       level: "RED",
-      reason: `${giReports.length} оқушыда ${CLUSTER.WINDOW_MIN} минут ішінде ішек-қарын белгілері тіркелді`,
+      reason: `${children.size} оқушыда ${CLUSTER.WINDOW_MIN} минут ішінде ішек-қарын белгілері тіркелді`,
       relatedBatchId: batchIds[0] ?? null,
       details: {
         reportIds: giReports.map((r) => r.id),

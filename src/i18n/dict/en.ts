@@ -170,7 +170,7 @@ export const en: Dict = {
     rolesTitle: "Who uses it",
     roles: {
       kitchen: { label: "School canteen", hint: "Photos, temperatures, batches" },
-      nurse: { label: "School nurse", hint: "Symptoms, no names" },
+      nurse: { label: "School nurse", hint: "Child, class, symptoms" },
       ses: { label: "SES inspector", hint: "Map, alerts, orders" },
       edu: { label: "Education department", hint: "Read-only" },
       parent: { label: "Parents", hint: "Menu and rating via QR, no login" },
@@ -191,7 +191,7 @@ export const en: Dict = {
       { title: "Fix", text: "The inspector issues an order; the canteen completes it with photo proof." },
     ],
     footerLeft: "Smart City Aktau hackathon · Mangystau Hub",
-    footerRight: "Students' personal data is never stored",
+    footerRight: "Only the nurse sees a child's name; it is deleted after 30 days",
   },
 
   login: {
@@ -657,6 +657,13 @@ export const en: Dict = {
     eatability: (dish, pct) => `«${dish}»: ${pct}% eaten — a check of the cooking technology is recommended`,
   },
   nurse: {
+    studentName: "Child's full name",
+    studentNamePlaceholder: "e.g. Aisulu Nurlanovna",
+    otherNote: "Describe the other symptom",
+    otherNotePlaceholder: "e.g. dizziness, rash",
+    nameRequired: "Enter the child's full name and class.",
+    otherRequired: "If “Other” is selected, describe the symptom.",
+    privacy: "Only the school nurse sees the name (SES sees only the class and symptoms); it is deleted after 30 days.",
     subtitle: "Symptom reports",
     formTitle: "Report symptoms",
     grade: "Grade",

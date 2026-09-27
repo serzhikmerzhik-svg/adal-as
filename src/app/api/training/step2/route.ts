@@ -8,12 +8,14 @@ import { shortName } from "@/lib/format";
 export async function POST() {
   const school = await getTrainingSchool();
   const grades = ["5А", "5А", "5Ә", "6Б"];
+  const names = ["Айсұлу Н.", "Ерасыл Қ.", "Томирис Б.", "Нұрдәулет С."];
   const now = Date.now();
 
   for (let i = 0; i < grades.length; i++) {
     await prisma.symptomReport.create({
       data: {
         schoolId: school.id,
+        studentName: names[i],
         grade: grades[i],
         symptoms: i % 2 === 0 ? ["NAUSEA", "ABDOMINAL_PAIN"] : ["VOMITING", "DIARRHEA"],
         reportedAt: new Date(now - (grades.length - i) * 2 * 60 * 1000),

@@ -31,10 +31,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         take: 50,
         include: { menuItem: true },
       }),
+      // Баланың аты-жөні СЭС-ке берілмейді: ол тек мектеп медбикесінде.
       prisma.symptomReport.findMany({
         where: { schoolId: id },
         orderBy: { reportedAt: "desc" },
         take: 50,
+        select: { id: true, grade: true, symptoms: true, otherNote: true, reportedAt: true },
       }),
       prisma.parentFeedback.findMany({
         where: { schoolId: id },
