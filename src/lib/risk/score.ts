@@ -162,7 +162,7 @@ export function totalScore(components: RiskComponents) {
 
 export function levelForScore(score: number, hasOpenRedAlert: boolean, hasOpenTraceAlert = false): RiskLevel {
   if (hasOpenRedAlert || score >= RISK_THRESHOLDS.RED_MIN) return "RED";
-  // Басқа мектептегі кластер партиясын алған мектеп алерт жабылғанша кемінде сары болып тұрады.
+  // Басқа мектептегі кластер партиясын алған не автоматты ереже іске қосылған нысан алерт жабылғанша кемінде сары.
   if (hasOpenTraceAlert || score >= RISK_THRESHOLDS.YELLOW_MIN) return "YELLOW";
   return "GREEN";
 }
@@ -177,7 +177,8 @@ export async function recomputeSchoolRisk(schoolId: string) {
       where: {
         schoolId,
         status: { in: ["OPEN", "ACKNOWLEDGED"] },
-        OR: [{ level: "RED" }, { level: "YELLOW", relatedBatchId: { not: null } }],
+        // Қызыл, партиядан таралған сары және автоматты ереже (тоңазытқыш, мәзір, жеу индексі) алерттері.
+        OR: [{ level: "RED" }, { level: "YELLOW", relatedBatchId: { not: null } }, { level: "YELLOW", rule: { not: null } }],
       },
       select: { level: true },
     }),

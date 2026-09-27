@@ -28,6 +28,9 @@ export async function POST() {
 
   await prisma.prescription.deleteMany({ where: { schoolId: school.id } });
   await prisma.alert.deleteMany({ where: { id: { in: [...redAlertIds, ...tracedIds] } } });
+  // Тоңазытқыш сценарийі: бүгінгі датчик өлшемдерінің нормадан тысы мен сол бойынша жазылған бұзушылық.
+  await prisma.deviceReading.deleteMany({ where: { schoolId: school.id, createdAt: { gte: start, lte: end }, value: { gt: 6 } } });
+  await prisma.kitchenLog.deleteMany({ where: { schoolId: school.id, source: "DEVICE", type: "FRIDGE_TEMP", createdAt: { gte: start, lte: end } } });
   await prisma.symptomReport.deleteMany({ where: { schoolId: school.id, reportedAt: { gte: start, lte: end } } });
   // Жаттығу кезінде тағайындалған, әлі орындалмаған тексерулер (seed тексерулерінде doneAt бар).
   await prisma.inspection.deleteMany({ where: { doneAt: null, plannedAt: { gte: start } } });

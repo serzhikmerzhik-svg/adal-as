@@ -32,6 +32,27 @@ enum LogType {
   PHOTO
   FRIDGE_TEMP
   HOT_TEMP
+  WASTE // қайтарылған табақтар фотосы: ИИ жеу индексін бағалайды
+}
+
+// Журнал жазбасын кім енгізді: қызметкер қолмен не құрылғы (термометр, датчик).
+enum LogSource {
+  MANUAL
+  DEVICE
+}
+
+// Тағам санаты: беру температурасының нормасы соған байланысты (сорпа ≥75°C, екінші тағам ≥65°C).
+enum DishCategory {
+  SOUP
+  MAIN
+  HOT_DRINK
+  COLD
+}
+
+// Асхана құрылғысы: тағам термометрі (щуп) не тоңазытқыш датчигі.
+enum DeviceKind {
+  PROBE
+  FRIDGE
 }
 
 enum Symptom {
@@ -93,12 +114,12 @@ model School {
   lng              Float
   studentsCount    Int
   districtId       String
-  district         District  @relation(fields: [districtId], references: [id])
-  riskScore        Int       @default(0)
-  riskLevel        RiskLevel @default(GREEN)
+  district         District     @relation(fields: [districtId], references: [id])
+  riskScore        Int          @default(0)
+  riskLevel        RiskLevel    @default(GREEN)
   lastInspectionAt DateTime?
-  parentToken      String    @unique @default(cuid())
-  isTraining       Boolean   @default(false)
+  parentToken      String       @unique @default(cuid())
+  isTraining       Boolean      @default(false)
 
   users          User[]
   menuItems      MenuItem[]
@@ -110,6 +131,8 @@ model School {
   alerts         Alert[]
   inspections    Inspection[]
   prescriptions  Prescription[]
+  devices        Device[]
+  staff          Staff[]
 }
 
 model User {
@@ -153,15 +176,20 @@ model Delivery {
 }
 
 model MenuItem {
-  id               String   @id @default(cuid())
+  id               String        @id @default(cuid())
   schoolId         String
-  school           School   @relation(fields: [schoolId], references: [id])
-  date             DateTime @db.Date
+  school           School        @relation(fields: [schoolId], references: [id])
+  date             DateTime      @db.Date
   name             String
   standardPortionG Int?
   batchId          String?
-  batch            Batch?   @relation(fields: [batchId], references: [id])
-  blocked          Boolean  @default(false)
+  batch            Batch?        @relation(fields: [batchId], references: [id])
+  blocked          Boolean       @default(false)
+  category         DishCategory  @default(MAIN)
+  // СЭС бекіткен жоспардағы тағам; жоқ болса — жоспардан тыс (себебі offPlanReason-да, СЭС-ке сары алерт).
+  planItemId       String?
+  planItem         MenuPlanItem? @relation(fields: [planItemId], references: [id])
+  offPlanReason    String?
 
   logs KitchenLog[]
 }
@@ -188,6 +216,10 @@ model KitchenLog {
   aiModel      String?
   aiCheckedAt  DateTime?
   reviewedAt   DateTime?
+  // Тек WASTE үшін: табақтарда қалған тағамның үлесі (%), жеу индексі = 100 − осы.
+  aiWastePct   Int?
+  source       LogSource   @default(MANUAL)
+  deviceId     String?
 
   @@index([type, createdAt])
   @@index([photoHash])
@@ -231,6 +263,8 @@ model Alert {
   details        Json
   relatedBatchId String?
   status         AlertStatus @default(OPEN)
+  // Автоматты ереже (FRIDGE, OFF_PLAN, INGREDIENT, EATABILITY): ашық тұрғанда нысан кемінде сары.
+  rule           String?
   createdAt      DateTime    @default(now())
   acknowledgedAt DateTime?
   closedAt       DateTime?
@@ -277,4 +311,83 @@ model CaptureToken {
   usedAt    DateTime?
 
   @@index([schoolId, createdAt])
+}
+
+// Асхана құрылғысы (мысалы, ESP32 + DS18B20 щуп). Кілттің өзі сақталмайды, тек sha256 хэші:
+// құрылғы POST /api/device/readings сұранысына "Authorization: Bearer <кілт>" қосады.
+model Device {
+  id          String     @id @default(cuid())
+  schoolId    String
+  school      School     @relation(fields: [schoolId], references: [id])
+  kind        DeviceKind
+  label       String
+  keyHash     String     @unique
+  keyHint     String // кілттің соңғы 4 таңбасы: тізімде қай құрылғы екенін тану үшін
+  createdAt   DateTime   @default(now())
+  lastSeenAt  DateTime?
+  lastValue   Float?
+  revokedAt   DateTime?
+  // PROBE: қызметкер «Өлшеу» басқан мәзірдегі тағам. Осыдан кейін 2 минут ішінде келген өлшем соған жазылады.
+  armedTarget String?
+  armedAt     DateTime?
+
+  readings DeviceReading[]
+
+  @@index([schoolId])
+}
+
+model DeviceReading {
+  id        String   @id @default(cuid())
+  deviceId  String
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  schoolId  String
+  value     Float
+  target    String? // қай журнал жазбасына (KitchenLog) жазылды
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, createdAt])
+}
+
+// Асхана қызметкері: аты-жөні сақталмайды, тек лауазымы мен бас әріптері ("Аспаз · Г. С.").
+model Staff {
+  id       String       @id @default(cuid())
+  schoolId String
+  school   School       @relation(fields: [schoolId], references: [id])
+  label    String
+  active   Boolean      @default(true)
+  checks   StaffCheck[]
+}
+
+// Смена алдындағы тексеру: ИИ фотодан форманы бағалайды (бас киім/тор, қолғап, таза алжапқыш).
+// Қызметкердің фотосы сақталмайды — тек нәтиже мен хэш (қайталанған фотоны табу үшін).
+model StaffCheck {
+  id          String     @id @default(cuid())
+  staffId     String
+  staff       Staff      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  schoolId    String
+  createdAt   DateTime   @default(now())
+  photoHash   String?
+  aiStatus    PhotoCheck @default(PENDING)
+  aiIssues    String[]   @default([])
+  aiSummary   String?
+  aiModel     String?
+  aiCheckedAt DateTime?
+
+  @@index([schoolId, createdAt])
+}
+
+// СЭС бекіткен екі апталық циклдік мәзір (мектеп, балабақша): оқу күні (1–10) бойынша тағамдар мен техкарта.
+model MenuPlanItem {
+  id             String       @id @default(cuid())
+  kind           FacilityKind
+  day            Int
+  name           String
+  category       DishCategory
+  portionG       Int
+  mainIngredient String // техкартадағы негізгі өнім: партиядағы өніммен салыстырылады
+  composition    String
+  approvedAt     DateTime
+  menuItems      MenuItem[]
+
+  @@index([kind, day])
 }

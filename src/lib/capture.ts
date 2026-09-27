@@ -32,7 +32,8 @@ export function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng
   return Math.round(2 * 6_371_000 * Math.asin(Math.sqrt(h)));
 }
 
-export type CapturePurpose = "PORTION" | "PROOF";
+/** PORTION — порция, PROOF — нұсқаманың фото-дәлелі, STAFF — қызметкер формасы, WASTE — қайтарылған табақтар. */
+export type CapturePurpose = "PORTION" | "PROOF" | "STAFF" | "WASTE";
 
 export async function issueCaptureToken(input: { schoolId: string; purpose: CapturePurpose; targetId: string; distanceM: number | null }) {
   const token = await prisma.captureToken.create({

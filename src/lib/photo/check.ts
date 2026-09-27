@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import type { PhotoCheck } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { FACILITY_KIND_LABEL } from "@/lib/risk/labels";
-import { parseModelVerdict, type ModelVerdict, type PhotoIssue } from "./verdict";
+import { checkEatability } from "@/lib/rules";
+import { parseModelVerdict, parseUniformVerdict, parseWasteVerdict, type ModelVerdict, type PhotoIssue } from "./verdict";
 
 // ИИ OpenAI-үйлесімді кез келген API арқылы шақырылады: Google Gemini
 // (AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai) немесе жергілікті шлюз.
@@ -19,6 +20,27 @@ Answer ONLY with one JSON object, no other text:
 - note: one short sentence in Kazakh explaining the decision.
 Be strict but fair: ordinary lighting, angle or plating differences are not issues.
 The app itself adds a dark band at the bottom ("Adal As · <facility code> · <date time>" and a token id), and a printed QR stand is placed next to the plate on purpose. Both are expected: never treat them as a screen, stock image or any other issue.`;
+
+// Қайтарылған табақтар: жеу индексі (ИИ табақтарда қалған тағамның үлесін бағалайды).
+const WASTE_PROMPT = `You review photos of returned plates and trays after a school or kindergarten meal in Aktau, Kazakhstan.
+If children leave most of a dish uneaten, the sanitary service (SES) treats it as a sign that the cooking technology was broken (raw, oversalted, spoiled or cold food) and plans a quality check.
+Answer ONLY with one JSON object, no other text:
+{"is_returned_plates": boolean, "uneaten_pct": number | null, "issues": string[], "note": string}
+- uneaten_pct: share of the served food still left on the plates/trays, 0–100 (0 = everything eaten). null if you cannot judge.
+- issues: zero or more of NOT_TRAYS (not a photo of returned plates or a waste bin), BLURRY, SCREEN_OR_STOCK.
+- note: one short sentence in Kazakh.
+The app adds a dark band at the bottom ("Adal As · <code> · <date time>"); it is expected, never an issue.`;
+
+// Смена алдындағы тексеру: тек форма. Адамды танымайды, бет-әлпетін сипаттамайды, мас-еместігін бағаламайды.
+const UNIFORM_PROMPT = `You check the uniform of a canteen cook before the shift for the sanitary service (SES) in Aktau, Kazakhstan.
+Look only at the uniform. Do not identify the person, do not describe the face, do not guess health, age, emotions or sobriety.
+Answer ONLY with one JSON object, no other text:
+{"person_visible": boolean, "head_covered": boolean | null, "gloves": boolean | null, "apron": boolean | null, "issues": string[], "note": string}
+- head_covered: hair is fully under a cap, hat or hairnet. gloves: disposable gloves are on both visible hands. apron: a clean apron or white coat is worn.
+- The cook is asked to face the camera from head to waist with both hands raised in front of the chest. If the head is cut off, head_covered = false; if the hands are not visible, gloves = false.
+- issues: zero or more of NO_PERSON, HEAD_UNCOVERED, NO_GLOVES, NO_APRON, DIRTY_UNIFORM, BLURRY, SCREEN_OR_STOCK.
+- note: one short sentence in Kazakh.
+The app adds a dark band at the bottom ("Adal As · <code> · <date time>"); it is expected, never an issue.`;
 
 type LoadedImage = { bytes: Buffer; mediaType: string; dataUrl: string };
 
@@ -62,13 +84,15 @@ function messageText(content: unknown): string {
   return "";
 }
 
-async function askVisionModel(
+/** Суретті модельге жібереді және жауап мәтінін қайтарады; модель бос болмаса (503/429), тізімдегі келесісі сұралады. */
+async function askVision(
   config: NonNullable<ReturnType<typeof aiConfig>>,
+  system: string,
   image: LoadedImage,
   context: string,
-): Promise<ModelVerdict & { model: string }> {
+): Promise<{ text: string; model: string }> {
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: system },
     {
       role: "user",
       content: [
@@ -95,8 +119,7 @@ async function askVisionModel(
     if (res.status === 400) res = await call(body);
     if (res.ok) {
       const json = (await res.json()) as { model?: string; choices?: { message?: { content?: unknown } }[] };
-      const text = messageText(json.choices?.[0]?.message?.content);
-      return { ...parseModelVerdict(text), model: json.model ?? model };
+      return { text: messageText(json.choices?.[0]?.message?.content), model: json.model ?? model };
     }
     lastError = `ИИ (${model}) ${res.status} қайтарды: ${(await res.text()).slice(0, 160)}`;
     if (!TRY_NEXT_MODEL.has(res.status)) break;
@@ -141,7 +164,8 @@ export async function checkPhotoLog(logId: string) {
         `Стандарт порция: ${log.menuItem?.standardPortionG ? `${log.menuItem.standardPortionG} г` : "белгісіз"}.`,
       ].join(" ");
       try {
-        verdict = await askVisionModel(config, image, context);
+        const answer = await askVision(config, SYSTEM_PROMPT, image, context);
+        verdict = { ...parseModelVerdict(answer.text), model: answer.model };
         summary = verdict.note;
       } catch (e) {
         status = "ERROR";
@@ -175,6 +199,87 @@ export async function checkPhotoLog(logId: string) {
         aiSummary: e instanceof Error ? e.message.slice(0, 200) : "Фотоны тексеру мүмкін болмады",
         aiCheckedAt: new Date(),
       },
+    });
+  }
+}
+
+const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
+
+/**
+ * Қайтарылған табақтар фотосы (WASTE): ИИ табақта қалған тағамның үлесін бағалайды. Жеу индексі
+ * EATABILITY.LOW_PCT-тен төмен болса, СЭС-ке сары алерт кетеді (сапаны тексеру ұсынылады).
+ */
+export async function checkWasteLog(logId: string) {
+  const log = await prisma.kitchenLog.findUnique({ where: { id: logId }, select: { id: true, photoUrl: true, menuItem: { select: { name: true } } } });
+  if (!log?.photoUrl) return;
+  const config = aiConfig();
+  try {
+    const image = await loadImage(log.photoUrl);
+    if (!config) {
+      await prisma.kitchenLog.update({
+        where: { id: log.id },
+        data: { photoHash: sha256(image.bytes), aiStatus: "DISABLED", aiSummary: "ИИ қосылмаған", aiCheckedAt: new Date() },
+      });
+      return;
+    }
+    const answer = await askVision(config, WASTE_PROMPT, image, `Тағам: ${log.menuItem?.name ?? "белгісіз"}.`);
+    const verdict = parseWasteVerdict(answer.text);
+    await prisma.kitchenLog.update({
+      where: { id: log.id },
+      data: {
+        photoHash: sha256(image.bytes),
+        aiStatus: verdict.issues.length > 0 ? "FLAGGED" : "OK",
+        aiIssues: verdict.issues,
+        aiWastePct: verdict.wastePct,
+        aiSummary: verdict.note,
+        aiModel: answer.model,
+        aiCheckedAt: new Date(),
+      },
+    });
+    if (verdict.wastePct !== null) await checkEatability(log.id);
+  } catch (e) {
+    await prisma.kitchenLog.update({
+      where: { id: log.id },
+      data: { aiStatus: "ERROR", aiSummary: e instanceof Error ? e.message.slice(0, 200) : "ИИ жауап бермеді", aiCheckedAt: new Date() },
+    });
+  }
+}
+
+/**
+ * Смена алдындағы форма тексеруі. Фото тек осы шақыруда жадта болады және ДБ-ға жазылмайды:
+ * StaffCheck-те тек нәтиже мен хэш қалады.
+ */
+export async function checkStaffUniform(checkId: string, dataUrl: string) {
+  const config = aiConfig();
+  try {
+    const image = await loadImage(dataUrl);
+    const photoHash = sha256(image.bytes);
+    const duplicate = !!(await prisma.staffCheck.findFirst({ where: { photoHash, id: { not: checkId } }, select: { id: true } }));
+    if (!config) {
+      await prisma.staffCheck.update({
+        where: { id: checkId },
+        data: { photoHash, aiStatus: duplicate ? "FLAGGED" : "DISABLED", aiIssues: duplicate ? ["DUPLICATE"] : [], aiSummary: "ИИ қосылмаған", aiCheckedAt: new Date() },
+      });
+      return;
+    }
+    const answer = await askVision(config, UNIFORM_PROMPT, image, "Асхана қызметкері смена алдында.");
+    const verdict = parseUniformVerdict(answer.text);
+    const issues = [...verdict.issues, ...(duplicate ? ["DUPLICATE"] : [])];
+    await prisma.staffCheck.update({
+      where: { id: checkId },
+      data: {
+        photoHash,
+        aiStatus: issues.length > 0 ? "FLAGGED" : "OK",
+        aiIssues: issues,
+        aiSummary: verdict.note,
+        aiModel: answer.model,
+        aiCheckedAt: new Date(),
+      },
+    });
+  } catch (e) {
+    await prisma.staffCheck.update({
+      where: { id: checkId },
+      data: { aiStatus: "ERROR", aiSummary: e instanceof Error ? e.message.slice(0, 200) : "ИИ жауап бермеді", aiCheckedAt: new Date() },
     });
   }
 }

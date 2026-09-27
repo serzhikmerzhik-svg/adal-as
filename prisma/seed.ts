@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { PrismaClient, type FacilityKind, type Prisma, type RiskLevel } from "@prisma/client";
+import { PrismaClient, type DishCategory, type FacilityKind, type Prisma, type RiskLevel } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { recomputeSchoolRisk } from "../src/lib/risk/score";
 import { mapLimit } from "../src/lib/concurrency";
 import { microdistrict, schoolCipher } from "../src/lib/format";
+import { hashDeviceKey, keyHint, newDeviceKey } from "../src/lib/devices";
+import { ingredientMatches, planDay } from "../src/lib/plan";
+import { KINDERGARTEN_PLAN, SCHOOL_PLAN, type PlanDish } from "./menu-plan";
 
 const prisma = new PrismaClient();
 
@@ -109,6 +112,8 @@ const CODES: Record<FacilityKind, string[]> = {
 // Сценарий нысандары: код → қай шағын аудандағы нысан алынады (бірінші табылғаны) және рөлі.
 const FIXED: Record<string, { mkr: string[]; scenario: Scenario; training?: boolean }> = {
   "А-12": { mkr: ["14"], scenario: "training", training: true },
+  // №AD (№14 мектеп, 26-мкр): құрылғы демосы — термометр-щуп осы асханаға тіркеледі, геолокация тексерілмейді.
+  "А-14": { mkr: ["26"], scenario: "green", training: true },
   "А-05": { mkr: ["7"], scenario: "green" },
   "А-19": { mkr: ["5"], scenario: "green" },
   "М-07": { mkr: ["11"], scenario: "green" },
@@ -127,13 +132,26 @@ const EXTRA_SCENARIO: Record<string, Scenario> = {
   "Ас-01": "yellowPhoto",
 };
 
-const MENU: Record<FacilityKind, string[]> = {
-  SCHOOL: ["Көже", "Ет тұшпара", "Палау", "Балық котлеті", "Макарон бефстроганов", "Сорпа"],
-  KINDERGARTEN: ["Сүт ботқасы", "Тауық сорпасы", "Картоп пюресі", "Бу котлеті", "Жеміс компоты"],
-  RESTAURANT: ["Бешбармақ", "Қуырдақ", "Лағман", "Стейк", "Балық сорпасы", "Палау"],
-  CAFE: ["Бургер", "Лағман", "Самса", "Шашлық", "Цезарь салаты", "Манты"],
-  CANTEEN: ["Сорпа", "Палау", "Манты", "Котлет гарнирмен", "Лағман"],
+// Автоматты ережелердің бастапқы мысалдары: СЭС тақтасында әр ереженің алерті көрінсін.
+const RULE_SCENARIO: Record<string, "INGREDIENT" | "EATABILITY" | "OFF_PLAN"> = {
+  "А-22": "INGREDIENT", // техкартада сиыр еті, партияда шұжық
+  "А-30": "EATABILITY", // кеше балалар тағамның көбін жемеген
+  "Б-04": "OFF_PLAN", // жоспардан тыс тағам
 };
+
+// Мектеп пен балабақша мәзірі СЭС бекіткен жоспардан (prisma/menu-plan.ts), басқаларында еркін мәзір.
+const PLAN: Partial<Record<FacilityKind, PlanDish[][]>> = { SCHOOL: SCHOOL_PLAN, KINDERGARTEN: KINDERGARTEN_PLAN };
+const MENU: Record<"RESTAURANT" | "CAFE" | "CANTEEN", [string, DishCategory][]> = {
+  RESTAURANT: [["Бешбармақ", "MAIN"], ["Қуырдақ", "MAIN"], ["Лағман", "MAIN"], ["Стейк", "MAIN"], ["Балық сорпасы", "SOUP"], ["Палау", "MAIN"]],
+  CAFE: [["Бургер", "MAIN"], ["Лағман", "MAIN"], ["Самса", "MAIN"], ["Шашлық", "MAIN"], ["Цезарь салаты", "COLD"], ["Манты", "MAIN"]],
+  CANTEEN: [["Сорпа", "SOUP"], ["Палау", "MAIN"], ["Манты", "MAIN"], ["Гарнирмен котлет", "MAIN"], ["Лағман", "MAIN"]],
+};
+// Беру температурасы нормада: сорпа мен ыстық сусын ≥75 °C, екінші тағам ≥65 °C.
+const SERVE_RANGE: Record<DishCategory, [number, number] | null> = { SOUP: [76, 84], HOT_DRINK: [76, 82], MAIN: [66, 78], COLD: null };
+
+// Асхана қызметкерлері: аты-жөні сақталмайды, тек лауазымы мен бас әріптері.
+const STAFF_ROLES = ["Бас аспаз", "Аспаз", "Аспаз көмекшісі"];
+const INITIALS = "АБГДЕЖЗКЛМНОРСТШ";
 const CAPACITY: Record<FacilityKind, [number, number]> = {
   SCHOOL: [400, 1200],
   KINDERGARTEN: [80, 280],
@@ -170,7 +188,8 @@ async function insertChunked<T>(label: string, rows: T[], insert: (chunk: T[]) =
 async function clearAll() {
   await prisma.$executeRawUnsafe(
     `TRUNCATE "Prescription", "Inspection", "Alert", "RiskSnapshot", "ParentFeedback", "SymptomReport", "KitchenLog",
-      "MenuItem", "Delivery", "Batch", "Supplier", "CaptureToken", "User", "School", "District" CASCADE`,
+      "MenuItem", "MenuPlanItem", "Delivery", "Batch", "Supplier", "CaptureToken", "DeviceReading", "Device",
+      "StaffCheck", "Staff", "User", "School", "District" CASCADE`,
   );
 }
 
@@ -308,7 +327,7 @@ async function main() {
   // Жеткізушілер шартты атаулармен (нақты компанияларды айыптамау үшін). Д-ның сертификаты 8 күннен кейін бітеді.
   const supplierDefs = [
     { name: "Жеткізуші А", bin: "180540011122", certDays: 300, prefix: "Н-10", products: ["Нан", "Ұн"] },
-    { name: "Жеткізуші Б", bin: "150240033344", certDays: 210, prefix: "К-24", products: ["Сиыр еті", "Тауық еті"] },
+    { name: "Жеткізуші Б", bin: "150240033344", certDays: 210, prefix: "К-24", products: ["Сиыр еті", "Тауық еті", "Шұжық"] },
     { name: "Жеткізуші В", bin: "170740055566", certDays: 400, prefix: "С-30", products: ["Сүт", "Айран"] },
     { name: "Жеткізуші Г", bin: "190940077788", certDays: 150, prefix: "Ж-50", products: ["Картоп", "Пияз", "Алма"] },
     { name: "Жеткізуші Д", bin: "160340099900", certDays: 8, prefix: "С-31", products: ["Ірімшік", "Қаймақ"] },
@@ -347,12 +366,15 @@ async function main() {
   batches.push(sharedBatch);
   await prisma.batch.createMany({ data: batches });
   const otherBatches = batches.filter((b) => b.id !== sharedBatch.id);
+  // Ереже мысалы: А-22-ге бүгін шұжық партиясы келді, ол сиыр етінің орнына тағамға байланады.
+  const sausageBatch = otherBatches.find((b) => b.product === "Шұжық")!;
 
   const deliveries: Prisma.DeliveryCreateManyInput[] = ["А-12", "А-05", "А-19", "М-07"].map((code) => ({
     batchId: sharedBatch.id!,
     schoolId: byCode.get(code)!.id,
     deliveredAt: daysAgo(0),
   }));
+  deliveries.push({ batchId: sausageBatch.id!, schoolId: byCode.get("А-22")!.id, deliveredAt: daysAgo(0) });
   for (const f of facilities) {
     const count = randInt(2, 4);
     for (let i = 0; i < count; i++) {
@@ -361,10 +383,36 @@ async function main() {
   }
   await insertChunked("жеткізулер", deliveries, (c) => prisma.delivery.createMany({ data: c }));
 
+  console.log("Екі апталық мәзір жоспары (СЭС бекіткен)...");
+  const planRows = (Object.entries(PLAN) as [FacilityKind, PlanDish[][]][]).flatMap(([kind, days]) =>
+    days.flatMap((dishes, i) =>
+      dishes.map((d) => ({
+        id: randomUUID(),
+        kind,
+        day: i + 1,
+        name: d.name,
+        category: d.category,
+        portionG: d.portionG,
+        mainIngredient: d.main,
+        composition: d.composition,
+        approvedAt: daysAgo(20),
+      })),
+    ),
+  );
+  await prisma.menuPlanItem.createMany({ data: planRows });
+  const planFor = (kind: FacilityKind, date: Date) => planRows.filter((p) => p.kind === kind && p.day === planDay(date));
+  // Тағамның негізгі өніміне сай партия (техкарта бойынша); сайы болмаса — партиясыз.
+  const batchFor = (product: string) => {
+    const matching = otherBatches.filter((b) => ingredientMatches(product, b.product));
+    return matching.length ? matching[randInt(0, matching.length - 1)].id! : null;
+  };
+
   console.log("30 күндік ас үй журналы мен бағалар...");
   const menuItems: Prisma.MenuItemCreateManyInput[] = [];
   const logs: Prisma.KitchenLogCreateManyInput[] = [];
   const feedback: Prisma.ParentFeedbackCreateManyInput[] = [];
+  const ruleAlerts: Prisma.AlertCreateManyInput[] = [];
+  type SeedDish = { name: string; category: DishCategory; portionG: number; planItemId: string | null; main: string | null; offPlan?: string };
 
   for (const f of facilities) {
     const sc = f.scenario;
@@ -374,29 +422,94 @@ async function main() {
       // А-12-нің бүгінгі журналын оқу-жаттығу режимінің 1-қадамы өзі толтырады.
       if (sc === "training" && day === 0) continue;
       const date = daysAgo(day);
-      const itemsToday = randInt(1, 2);
+      const free = MENU[f.kind as keyof typeof MENU];
+      const dishes: SeedDish[] = PLAN[f.kind]
+        ? planFor(f.kind, date).map((p) => ({ name: p.name, category: p.category, portionG: p.portionG, planItemId: p.id, main: p.mainIngredient }))
+        : Array.from({ length: randInt(1, 2) }, () => {
+            const [name, category] = free[randInt(0, free.length - 1)];
+            return { name, category, portionG: randInt(200, 350), planItemId: null, main: null };
+          });
+      const rule = RULE_SCENARIO[f.code];
+      if (rule === "OFF_PLAN" && day === 0) {
+        dishes.push({ name: "Макаронмен шұжық", category: "MAIN", portionG: 200, planItemId: null, main: null, offPlan: "Сиыр еті уақытында жеткізілмеді" });
+      }
 
-      for (let ix = 0; ix < itemsToday; ix++) {
+      dishes.forEach((d, ix) => {
         const menuItemId = randomUUID();
+        const sausage = rule === "INGREDIENT" && day === 0 && d.category === "MAIN" && d.main;
         menuItems.push({
           id: menuItemId,
           schoolId: f.id,
           date,
-          name: MENU[f.kind][randInt(0, MENU[f.kind].length - 1)],
-          standardPortionG: randInt(150, 350),
-          batchId: otherBatches[randInt(0, otherBatches.length - 1)].id,
+          name: d.name,
+          category: d.category,
+          standardPortionG: d.portionG,
+          planItemId: d.planItemId,
+          offPlanReason: d.offPlan ?? null,
+          batchId: sausage ? sausageBatch.id : d.offPlan ? null : d.main ? batchFor(d.main) : otherBatches[randInt(0, otherBatches.length - 1)].id,
         });
+        if (sausage) {
+          ruleAlerts.push({
+            schoolId: f.id,
+            level: "YELLOW",
+            rule: "INGREDIENT",
+            reason: `«${d.name}»: техкартада «${d.main}», ал партияда «Шұжық» (${sausageBatch.code})`,
+            details: { key: menuItemId, menuItemId, dish: d.name, expected: d.main, actual: "Шұжық", batchCode: sausageBatch.code },
+          });
+        }
+        if (d.offPlan) {
+          ruleAlerts.push({
+            schoolId: f.id,
+            level: "YELLOW",
+            rule: "OFF_PLAN",
+            reason: `Жоспардан тыс тағам: «${d.name}» — ${d.offPlan}`,
+            details: { key: menuItemId, menuItemId, dish: d.name, note: d.offPlan },
+          });
+        }
 
         const skipPhoto = (sc === "yellowPhoto" && day < 3) || (sc === "training" && day === 1);
         if (!skipPhoto) {
           logs.push({ schoolId: f.id, menuItemId, type: "PHOTO", photoUrl: "https://placehold.co/400x300?text=Portion", createdAt: date, createdById: "seed" });
         }
-        const violate = day < 14 && tempViolationsLeft > 0 && (sc === "yellowTemp" ? day % 2 === 0 : ix === 0 && day % 3 === 0);
-        if (violate) tempViolationsLeft -= 1;
-        const fridge = violate ? Number(rand(8, 11).toFixed(1)) : Number(rand(2.5, 5.5).toFixed(1));
-        logs.push({ schoolId: f.id, menuItemId, type: "FRIDGE_TEMP", valueC: fridge, isViolation: violate, createdAt: date, createdById: "seed" });
-        logs.push({ schoolId: f.id, menuItemId, type: "HOT_TEMP", valueC: Number(rand(68, 82).toFixed(1)), isViolation: false, createdAt: date, createdById: "seed" });
-      }
+        // Тоңазытқыш күніне бір рет (бірінші тағамның жазбасында), беру температурасы әр ыстық тағамға.
+        if (ix === 0) {
+          const violate = day < 14 && tempViolationsLeft > 0 && (sc === "yellowTemp" ? day % 2 === 0 : day % 3 === 0);
+          if (violate) tempViolationsLeft -= 1;
+          const fridge = violate ? Number(rand(8, 11).toFixed(1)) : Number(rand(2.5, 5.5).toFixed(1));
+          logs.push({ schoolId: f.id, menuItemId, type: "FRIDGE_TEMP", valueC: fridge, isViolation: violate, createdAt: date, createdById: "seed" });
+        }
+        const serve = SERVE_RANGE[d.category];
+        if (serve) {
+          logs.push({ schoolId: f.id, menuItemId, type: "HOT_TEMP", valueC: Number(rand(...serve).toFixed(1)), isViolation: false, createdAt: date, createdById: "seed" });
+        }
+        // Қайтарылған табақтар (жеу индексі): соңғы аптада екінші тағамға, ИИ бағасы қалыпты.
+        if (PLAN[f.kind] && d.category === "MAIN" && day >= 1 && day <= 7) {
+          const lowEat = rule === "EATABILITY" && day === 1;
+          if (lowEat) {
+            ruleAlerts.push({
+              schoolId: f.id,
+              level: "YELLOW",
+              rule: "EATABILITY",
+              reason: `«${d.name}»: жеу индексі 32% — балалар тағамның көбін жемеген, дайындау технологиясын тексеру ұсынылады`,
+              details: { key: menuItemId, menuItemId, dish: d.name, eatPct: 32 },
+              createdAt: new Date(date.getTime() + 2 * 3600_000),
+            });
+          }
+          logs.push({
+            schoolId: f.id,
+            menuItemId,
+            type: "WASTE",
+            photoUrl: "https://placehold.co/400x300?text=Trays",
+            aiStatus: "OK",
+            aiWastePct: lowEat ? 68 : randInt(6, 28),
+            aiSummary: lowEat ? "Табақтардың көбінде тағам түгел дерлік қалған." : "Табақтардың көбі бос, қалдық аз.",
+            aiModel: "seed",
+            aiCheckedAt: date,
+            createdAt: date,
+            createdById: "seed",
+          });
+        }
+      });
 
       const lowRatings = sc === "yellowRating" || sc === "yellowPhoto";
       if (lowRatings && day < 14) {
@@ -413,6 +526,62 @@ async function main() {
   await insertChunked("мәзір", menuItems, (c) => prisma.menuItem.createMany({ data: c }));
   await insertChunked("ас үй журналы", logs, (c) => prisma.kitchenLog.createMany({ data: c }));
   await insertChunked("бағалар", feedback, (c) => prisma.parentFeedback.createMany({ data: c }));
+  await insertChunked("ереже алерттері", ruleAlerts, (c) => prisma.alert.createMany({ data: c }));
+
+  console.log("Смена алдындағы тексеру мен құрылғылар...");
+  // Мектеп пен балабақшада үш қызметкер. Бүгін таңертең көбі форма тексеруінен өткен; оқу-жаттығу
+  // нысандарында (А-12, №AD) тексеру қорғауда тірі көрсетіледі. Фото сақталмайды — тек нәтиже.
+  const morning = new Date();
+  morning.setHours(8, 0, 0, 0);
+  const checkBase = Math.min(morning.getTime(), Date.now() - 90 * 60_000);
+  const letter = () => INITIALS[randInt(0, INITIALS.length - 1)];
+  const staffRows: Prisma.StaffCreateManyInput[] = [];
+  const checkRows: Prisma.StaffCheckCreateManyInput[] = [];
+  for (const f of facilities.filter((x) => PLAN[x.kind])) {
+    STAFF_ROLES.forEach((role, i) => {
+      const id = randomUUID();
+      staffRows.push({ id, schoolId: f.id, label: `${role} · ${letter()}. ${letter()}.` });
+      if (f.training) return;
+      const issue = f.code === "А-27" && i === 2 ? "HEAD_UNCOVERED" : f.code === "Б-02" && i === 1 ? "NO_GLOVES" : null;
+      const at = new Date(checkBase + (i * 6 + randInt(0, 4)) * 60_000);
+      checkRows.push({
+        staffId: id,
+        schoolId: f.id,
+        createdAt: at,
+        aiStatus: issue ? "FLAGGED" : "OK",
+        aiIssues: issue ? [issue] : [],
+        aiSummary: issue === "HEAD_UNCOVERED" ? "Шаш бас киімнің астынан шығып тұр." : issue ? "Қолғап киілмеген." : "Бас киім, қолғап және алжапқыш бар.",
+        aiModel: "seed",
+        aiCheckedAt: at,
+      });
+    });
+  }
+  await prisma.staff.createMany({ data: staffRows });
+  await prisma.staffCheck.createMany({ data: checkRows });
+
+  // №AD асханасының термометр-щупы: кілт .env ішіндегі DEMO_DEVICE_KEY (құрылғының бағдарламасына да сол жазылады).
+  // Кілт тұрақты болғандықтан, seed қайта жүргізілсе де құрылғы жұмысын жалғастырады.
+  const devices: Prisma.DeviceCreateManyInput[] = [];
+  const demoKey = process.env.DEMO_DEVICE_KEY?.trim();
+  if (demoKey) {
+    devices.push({ schoolId: byCode.get("А-14")!.id, kind: "PROBE", label: "Термометр-щуп", keyHash: hashDeviceKey(demoKey), keyHint: keyHint(demoKey) });
+  } else {
+    console.log("  DEMO_DEVICE_KEY жоқ: №AD термометрін /kitchen бетінен қосыңыз");
+  }
+  // А-12 ет тоңазытқышының датчигі (жаттығу сценарийі үшін): соңғы тәулік өлшемдері қалыпты, кілті ешкімге берілмейді.
+  const fridgeKey = newDeviceKey();
+  const fridgeId = randomUUID();
+  const training = byCode.get("А-12")!;
+  devices.push({ id: fridgeId, schoolId: training.id, kind: "FRIDGE", label: "Ет тоңазытқышы", keyHash: hashDeviceKey(fridgeKey), keyHint: keyHint(fridgeKey), lastSeenAt: new Date(), lastValue: 3.9 });
+  await prisma.device.createMany({ data: devices });
+  await prisma.deviceReading.createMany({
+    data: Array.from({ length: 48 }, (_, i) => ({
+      deviceId: fridgeId,
+      schoolId: training.id,
+      value: i === 47 ? 3.9 : Number(rand(3.1, 4.8).toFixed(1)),
+      createdAt: new Date(Date.now() - (47 - i) * 30 * 60_000),
+    })),
+  });
 
   await prisma.inspection.createMany({
     data: facilities
@@ -454,6 +623,8 @@ async function main() {
       { login: "a12_kitchen", passwordHash, name: "Мектеп асханасы", role: "KITCHEN", schoolId: byCode.get("А-12")!.id },
       { login: "a12_nurse", passwordHash, name: "Мектеп медбикесі", role: "NURSE", schoolId: byCode.get("А-12")!.id },
       { login: "m07_kitchen", passwordHash, name: "Мейрамхана асханасы", role: "KITCHEN", schoolId: byCode.get("М-07")!.id },
+      // №AD мектеп асханасы (№14 мектеп, 26-мкр): термометр-щуп демосы.
+      { login: "ad_kitchen", passwordHash, name: "№AD мектеп асханасы", role: "KITCHEN", schoolId: byCode.get("А-14")!.id },
       { login: "ses1", passwordHash, name: "СЭС инспекторы", role: "SES", schoolId: null },
       { login: "edu1", passwordHash, name: "Білім бөлімі", role: "EDU", schoolId: null },
       { login: "admin", passwordHash, name: "Әкімші", role: "ADMIN", schoolId: null },
@@ -467,7 +638,7 @@ async function main() {
   const summary = await prisma.school.groupBy({ by: ["riskLevel"], _count: true });
   console.log("  деңгейлер:", summary.map((s) => `${s.riskLevel}=${s._count}`).join(" "));
   const scenarioRows = await prisma.school.findMany({
-    where: { code: { in: [...Object.keys(FIXED), ...Object.keys(EXTRA_SCENARIO)] } },
+    where: { code: { in: [...Object.keys(FIXED), ...Object.keys(EXTRA_SCENARIO), ...Object.keys(RULE_SCENARIO)] } },
     select: { code: true, name: true, address: true, riskScore: true, riskLevel: true },
     orderBy: { code: "asc" },
   });
