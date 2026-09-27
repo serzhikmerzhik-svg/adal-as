@@ -17,23 +17,16 @@ type TokenInfo = {
   qrRequired: boolean;
   geofence: { distanceM: number | null; radiusM: number; bypass: boolean };
 };
-type Phase = "permission" | "locating" | "starting" | "live" | "blocked";
+type Phase = "init" | "permission" | "locating" | "starting" | "live" | "blocked";
 export type CaptureMeta = { captureToken: string; qrCode?: string };
 
-// Бұрын рұқсат берілсе, түсіндірме экранын қайта көрсетпейміз (тек ыңғайлылық үшін).
-const GRANTED_KEY = "adal-as-camera-ok";
-function wasGranted() {
+/** Браузер камераға бұрын рұқсат берген бе (Permissions API). Берген болса, түсіндірме экраны көрсетілмейді. */
+async function cameraAlreadyAllowed() {
   try {
-    return window.localStorage.getItem(GRANTED_KEY) === "1";
+    const status = await navigator.permissions.query({ name: "camera" as PermissionName });
+    return status.state === "granted";
   } catch {
-    return false;
-  }
-}
-function rememberGranted() {
-  try {
-    window.localStorage.setItem(GRANTED_KEY, "1");
-  } catch {
-    // жеке режимде сақталмайды — келесі жолы түсіндірме қайта шығады
+    return false; // Firefox пен ескі браузерлер "camera" сұрауын білмейді — түсіндірме көрсетіледі
   }
 }
 
@@ -83,7 +76,7 @@ export function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const scanRef = useRef<HTMLCanvasElement | null>(null);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
-  const [phase, setPhase] = useState<Phase>(() => (wasGranted() ? "locating" : "permission"));
+  const [phase, setPhase] = useState<Phase>("init");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<TokenInfo | null>(null);
   const [offset, setOffset] = useState(0); // сервер уақыты − құрылғы уақыты
@@ -113,6 +106,18 @@ export function CameraCapture({
       return t.common.error;
     }
   }, [purpose, targetId, t.common.error]);
+
+  // 0. Рұқсат бұрын берілген болса — бірден геолокацияға, болмаса — түсіндірме экраны.
+  useEffect(() => {
+    if (phase !== "init") return;
+    let cancelled = false;
+    cameraAlreadyAllowed().then((allowed) => {
+      if (!cancelled) setPhase(allowed ? "locating" : "permission");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase]);
 
   // 1. Геолокация → токен.
   useEffect(() => {
@@ -155,7 +160,6 @@ export function CameraCapture({
           return;
         }
         streamRef.current = stream;
-        rememberGranted();
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => undefined);
@@ -290,7 +294,7 @@ export function CameraCapture({
           </span>
         </div>
 
-        {phase === "permission" ? (
+        {phase === "init" ? null : phase === "permission" ? (
           <div className="card space-y-4 p-5">
             <span className="inline-flex rounded-xl bg-primary-soft p-2.5 text-primary">
               <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
