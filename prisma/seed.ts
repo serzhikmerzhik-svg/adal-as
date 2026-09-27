@@ -11,12 +11,11 @@ const prisma = new PrismaClient();
 /*
  * Ақтау қаласының 60 тамақтану нысаны.
  *
- * Орналасуы шынайы: нысандар 2GIS-тегі нақты мектептер, балабақшалар, мейрамханалар, кафелер мен
- * асханалар тұрған шағын аудандардан алынады (scripts/fetch-2gis.mjs → prisma/data/facilities.json).
+ * Орналасуы шынайы: нүктелер 2GIS-тегі нақты мектептердің, балабақшалардың, мейрамханалардың,
+ * кафелер мен асханалардың дәл координаттарында (scripts/fetch-2gis.mjs → prisma/data/facilities.json).
  * Бірақ сценарийдегі бұзушылықтар мен «улану» ойдан шығарылған, сондықтан нақты нысандарды
  * айыптамау үшін атаулары ойдан шығарылған атаулармен ауыстырылады (fictionalNames), мекенжайы
- * шағын аудан деңгейінде қалады, координаттары ~100 м-ге ығыстырылады. Ішкі код (А-12, М-07…)
- * тек сценарий мен аккаунттарды байланыстыру үшін сақталады.
+ * шағын аудан деңгейінде қалады. Ішкі код (А-12, М-07…) тек сценарий мен аккаунттарды байланыстыру үшін.
  */
 
 type FacilityJson = { dgisId: string; kind: FacilityKind; name: string; address: string; lat: number; lng: number };
@@ -86,13 +85,14 @@ function fictionalNames(real: FacilityJson[]) {
   return names;
 }
 
-// Код префиксі мен нөмірлері (CLAUDE.md §10: 24 мектеп, 10 балабақша, 18 мейрамхана/кафе, 8 асхана).
+// Басты назар — мектеп асханалары: 40 мектеп, 10 балабақша. Мейрамхана, кафе, қоғамдық асхана —
+// қосымша (барлығы 10), жүйенің оларға да қолданылатынын көрсету үшін.
 const CODES: Record<FacilityKind, string[]> = {
-  SCHOOL: Array.from({ length: 24 }, (_, i) => `А-${String(i + 1).padStart(2, "0")}`),
+  SCHOOL: Array.from({ length: 40 }, (_, i) => `А-${String(i + 1).padStart(2, "0")}`),
   KINDERGARTEN: [...Array.from({ length: 9 }, (_, i) => `Б-0${i + 1}`), "Б-11"],
-  RESTAURANT: Array.from({ length: 9 }, (_, i) => `М-0${i + 1}`),
-  CAFE: Array.from({ length: 9 }, (_, i) => `К-${String(i + 6).padStart(2, "0")}`),
-  CANTEEN: Array.from({ length: 8 }, (_, i) => `Ас-0${i + 1}`),
+  RESTAURANT: ["М-01", "М-02", "М-03", "М-07"],
+  CAFE: ["К-06", "К-09", "К-14"],
+  CANTEEN: ["Ас-01", "Ас-03", "Ас-06"],
 };
 
 // Сценарий нысандары: код → қай шағын аудандағы нысан алынады (бірінші табылғаны) және рөлі.
@@ -106,14 +106,14 @@ const FIXED: Record<string, { mkr: string[]; scenario: Scenario; training?: bool
   "Ас-03": { mkr: ["27"], scenario: "yellowOverdue" },
   "Б-11": { mkr: ["32", "32Б", "31", "33", "29"], scenario: "yellowTemp" },
 };
-// Басқа сары нысандар (бастапқы күй: 9 сары, қызыл жоқ — қызылды /training тудырады).
+// Басқа сары нысандар (бастапқы күй: 9 сары, оның 5-і мектеп пен балабақша; қызылды /training тудырады).
 const EXTRA_SCENARIO: Record<string, Scenario> = {
   "А-08": "yellowRating",
-  "М-02": "yellowPhoto",
-  "М-05": "yellowTemp",
+  "А-16": "yellowOverdue",
+  "А-27": "yellowTemp",
+  "А-33": "yellowPhoto",
   "К-09": "yellowRating",
   "Ас-01": "yellowPhoto",
-  "Ас-06": "yellowTemp",
 };
 
 const MENU: Record<FacilityKind, string[]> = {
@@ -154,21 +154,13 @@ async function insertChunked<T>(label: string, rows: T[], insert: (chunk: T[]) =
   console.log(`  ${label}: ${rows.length}`);
 }
 
+// Бір TRUNCATE ... CASCADE: атомарлы әрі жылдам. Кезекпен deleteMany жасағанда қосулы тұрған сайт
+// (мысалы, after() ішіндегі тәуекел есептеу) арада жаңа жазба қосып, FK қатесіне әкелетін.
 async function clearAll() {
-  await prisma.prescription.deleteMany();
-  await prisma.inspection.deleteMany();
-  await prisma.alert.deleteMany();
-  await prisma.riskSnapshot.deleteMany();
-  await prisma.parentFeedback.deleteMany();
-  await prisma.symptomReport.deleteMany();
-  await prisma.kitchenLog.deleteMany();
-  await prisma.menuItem.deleteMany();
-  await prisma.delivery.deleteMany();
-  await prisma.batch.deleteMany();
-  await prisma.supplier.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.school.deleteMany();
-  await prisma.district.deleteMany();
+  await prisma.$executeRawUnsafe(
+    `TRUNCATE "Prescription", "Inspection", "Alert", "RiskSnapshot", "ParentFeedback", "SymptomReport", "KitchenLog",
+      "MenuItem", "Delivery", "Batch", "Supplier", "User", "School", "District" CASCADE`,
+  );
 }
 
 function shuffled<T>(items: T[]) {
@@ -218,9 +210,8 @@ function pickEstablishments(all: FacilityJson[]) {
         code,
         kind,
         mkr: f.mkr,
-        // ~100 м ығысу: нақты ғимаратты көрсетпеу үшін.
-        lat: f.lat + rand(-0.0011, 0.0011),
-        lng: f.lng + rand(-0.0014, 0.0014),
+        lat: f.lat,
+        lng: f.lng,
         scenario: FIXED[code]?.scenario ?? EXTRA_SCENARIO[code] ?? "green",
         training: !!FIXED[code]?.training,
       });
@@ -406,12 +397,14 @@ async function main() {
       }),
   });
 
-  // Ас-03: мерзімі өтіп кеткен екі нұсқама.
+  // yellowOverdue нысандарында мерзімі өтіп кеткен екі нұсқама.
   await prisma.prescription.createMany({
-    data: [
-      { schoolId: byCode.get("Ас-03")!.id, text: "Тоңазытқыштың термостатын ауыстырып, температура журналын күн сайын толтыру", dueAt: daysAgo(2) },
-      { schoolId: byCode.get("Ас-03")!.id, text: "Ет өнімдерін бөлек сақтау сөресін орнату", dueAt: daysAgo(5) },
-    ],
+    data: facilities
+      .filter((f) => f.scenario === "yellowOverdue")
+      .flatMap((f) => [
+        { schoolId: f.id, text: "Тоңазытқыштың термостатын ауыстырып, температура журналын күн сайын толтыру", dueAt: daysAgo(2) },
+        { schoolId: f.id, text: "Ет өнімдерін бөлек сақтау сөресін орнату", dueAt: daysAgo(5) },
+      ]),
   });
 
   console.log("Тәуекел тарихы (өткен 29 күн)...");
@@ -442,8 +435,9 @@ async function main() {
   });
 
   // Бүгінгі балды нақты тәуекел логикасы есептейді (cron есептейтінмен бірдей).
-  console.log("Бүгінгі тәуекел (нақты логикамен, 10 параллель)...");
-  await mapLimit(facilities, 10, (f) => recomputeSchoolRisk(f.id));
+  console.log("Бүгінгі тәуекел (нақты логикамен, 4 параллель)...");
+  // 4 параллель: ДБ алыс, әр есептеу бірнеше сұраныс жасайды, ал қосулы сайт та сол пулды қолданады.
+  await mapLimit(facilities, 4, (f) => recomputeSchoolRisk(f.id));
   const summary = await prisma.school.groupBy({ by: ["riskLevel"], _count: true });
   console.log("  деңгейлер:", summary.map((s) => `${s.riskLevel}=${s._count}`).join(" "));
   const scenarioRows = await prisma.school.findMany({

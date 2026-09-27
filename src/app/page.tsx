@@ -118,9 +118,6 @@ export default async function Home() {
               {cabinetHref ? "Кабинетке өту" : "Жүйеге кіру"}
               <span aria-hidden="true">→</span>
             </Link>
-            <Link href="/login?as=admin" className="btn btn-outline !min-h-12 !px-6 !text-base !bg-surface/70 backdrop-blur">
-              Оқу-жаттығу режимі
-            </Link>
           </div>
           <dl className="anim-fade-up mt-12 grid max-w-xl grid-cols-3 gap-3" style={{ animationDelay: "240ms" }}>
             {HERO_STATS.map((s) => (

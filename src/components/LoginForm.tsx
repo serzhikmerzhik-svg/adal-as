@@ -11,7 +11,6 @@ const TEST_ACCOUNTS = [
   { login: "m07_kitchen", label: "Мейрамхана асханасы" },
   { login: "ses1", label: "СЭС инспекторы" },
   { login: "edu1", label: "Білім бөлімі" },
-  { login: "admin", label: "Оқу-жаттығу режимі" },
 ];
 
 export function LoginForm({ initialLogin }: { initialLogin?: string }) {

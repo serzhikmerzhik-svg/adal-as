@@ -41,8 +41,16 @@ function aiConfig() {
   const apiKey = process.env.AI_API_KEY || undefined;
   // Қашықтағы API кілтсіз жауап бермейді: кілт қойылғанша ИИ өшірулі деп саналады (қате емес).
   if (!baseUrl || (!apiKey && !/^https?:\/\/(localhost|127\.0\.0\.1)[:/]/.test(`${baseUrl}/`))) return null;
-  return { baseUrl, model: process.env.AI_MODEL || "gemini-3.8-flash", apiKey };
+  // AI_MODEL — үтірмен бөлінген тізім: бірінші модель бос болмаса (503/429), келесісі сұралады.
+  const models = (process.env.AI_MODEL || "gemini-flash-latest,gemini-3.8-flash")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return { baseUrl, models, apiKey };
 }
+
+// Модель уақытша бос емес, лимит біткен немесе жаңа пайдаланушыларға жабық — келесі модельге көшеміз.
+const TRY_NEXT_MODEL = new Set([404, 429, 500, 502, 503, 504]);
 
 /** Chat Completions жауабындағы мәтін: кейбір провайдерлер content-ті бөліктер массиві ретінде қайтарады. */
 function messageText(content: unknown): string {
@@ -58,44 +66,41 @@ async function askVisionModel(
   image: LoadedImage,
   context: string,
 ): Promise<ModelVerdict & { model: string }> {
-  const body = {
-    model: config.model,
-    temperature: 0,
-    max_tokens: 400,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: context },
-          { type: "image_url", image_url: { url: image.dataUrl } },
-        ],
-      },
-    ],
-  };
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: context },
+        { type: "image_url", image_url: { url: image.dataUrl } },
+      ],
+    },
+  ];
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
-
-  // Алдымен JSON режимімен сұраймыз; оны қолдамайтын провайдер 400 қайтарса, режимсіз қайталаймыз.
-  let res = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ ...body, response_format: { type: "json_object" } }),
-    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-  });
-  if (res.status === 400) {
-    res = await fetch(`${config.baseUrl}/chat/completions`, {
+  const call = (body: object) =>
+    fetch(`${config.baseUrl}/chat/completions`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     });
-  }
-  if (!res.ok) throw new Error(`ИИ шлюзі ${res.status} қайтарды: ${(await res.text()).slice(0, 160)}`);
 
-  const json = (await res.json()) as { model?: string; choices?: { message?: { content?: unknown } }[] };
-  const text = messageText(json.choices?.[0]?.message?.content);
-  return { ...parseModelVerdict(text), model: json.model ?? config.model };
+  let lastError = "ИИ модельдері көрсетілмеген";
+  for (const model of config.models) {
+    const body = { model, temperature: 0, max_tokens: 400, messages };
+    // Алдымен JSON режимімен сұраймыз; оны қолдамайтын провайдер 400 қайтарса, режимсіз қайталаймыз.
+    let res = await call({ ...body, response_format: { type: "json_object" } });
+    if (res.status === 400) res = await call(body);
+    if (res.ok) {
+      const json = (await res.json()) as { model?: string; choices?: { message?: { content?: unknown } }[] };
+      const text = messageText(json.choices?.[0]?.message?.content);
+      return { ...parseModelVerdict(text), model: json.model ?? model };
+    }
+    lastError = `ИИ (${model}) ${res.status} қайтарды: ${(await res.text()).slice(0, 160)}`;
+    if (!TRY_NEXT_MODEL.has(res.status)) break;
+  }
+  throw new Error(lastError);
 }
 
 /**
