@@ -4,27 +4,29 @@ import { PrismaClient, type FacilityKind, type Prisma, type RiskLevel } from "@p
 import bcrypt from "bcryptjs";
 import { recomputeSchoolRisk } from "../src/lib/risk/score";
 import { mapLimit } from "../src/lib/concurrency";
-import { microdistrict } from "../src/lib/format";
+import { microdistrict, schoolCipher } from "../src/lib/format";
 
 const prisma = new PrismaClient();
 
 /*
- * Ақтау қаласының 60 тамақтану нысаны.
+ * Ақтау қаласының 54 тамақтану нысаны.
  *
  * Орналасуы шынайы: нүктелер 2GIS-тегі нақты мектептердің, балабақшалардың, мейрамханалардың,
  * кафелер мен асханалардың дәл координаттарында (scripts/fetch-2gis.mjs → prisma/data/facilities.json).
- * Бірақ сценарийдегі бұзушылықтар мен «улану» ойдан шығарылған, сондықтан нақты нысандарды
- * айыптамау үшін атаулары ойдан шығарылған атаулармен ауыстырылады (fictionalNames), мекенжайы
- * шағын аудан деңгейінде қалады. Ішкі код (А-12, М-07…) тек сценарий мен аккаунттарды байланыстыру үшін.
+ * Мектептер — Ақтаудың 34 мемлекеттік нөмірлі мектебі (№1–35, №4 жоқ), нөмірі шифрланған:
+ * 1→A … 9→I, 0→J (№14 → «№AD», schoolCipher). Сценарийдегі бұзушылықтар мен «улану» ойдан
+ * шығарылған, сондықтан нөмір ашық жазылмайды, ал басқа нысандардың атаулары ойдан шығарылған
+ * (fictionalNames). Мекенжай шағын аудан деңгейінде қалады. Ішкі код (А-12, М-07…) тек сценарий
+ * мен аккаунттарды байланыстыру үшін.
  */
 
 type FacilityJson = { dgisId: string; kind: FacilityKind; name: string; address: string; lat: number; lng: number };
 
 type Scenario = "green" | "greenInspected" | "training" | "yellowTemp" | "yellowPhoto" | "yellowRating" | "yellowOverdue";
 
-// Атаулар ойдан шығарылған: сценарийдегі бұзушылықтар да ойдан шығарылған, сондықтан атау нақты
-// нысанға таңылмауы керек. Әр атау 2GIS тізіміндегі 689 нақты атаумен салыстырылып, сәйкес келсе
-// алынып тасталады (fictionalNames). Ақтау мектептерінің нөмірі 1–35, сондықтан мектептерге 41-ден бастап.
+// Мектептен басқа нысандардың атаулары ойдан шығарылған: сценарийдегі бұзушылықтар да ойдан
+// шығарылған, сондықтан атау нақты нысанға таңылмауы керек. Әр атау 2GIS тізіміндегі 689 нақты
+// атаумен салыстырылып, сәйкес келсе алынып тасталады (fictionalNames).
 const NAME_POOL: Record<Exclude<FacilityKind, "SCHOOL">, string[]> = {
   KINDERGARTEN: [
     "Шұғыла", "Күншуақ", "Жұлдызай", "Құлыншақ", "Таңшолпан", "Еркетай", "Ботақан", "Нұршуақ", "Көгершін", "Гүлдәурен",
@@ -49,7 +51,6 @@ const KIND_SUFFIX: Record<Exclude<FacilityKind, "SCHOOL">, string> = {
   CAFE: "кафе",
   CANTEEN: "асхана",
 };
-const FIRST_SCHOOL_NUMBER = 41;
 
 const KZ_TO_RU: Record<string, string> = { ә: "а", ғ: "г", қ: "к", ң: "н", ө: "о", ұ: "у", ү: "у", һ: "х", і: "и" };
 const normalize = (s: string) =>
@@ -58,7 +59,7 @@ const normalize = (s: string) =>
     .replace(/[әғқңөұүһі]/g, (c) => KZ_TO_RU[c])
     .replace(/[^a-zа-яё0-9]/g, "");
 
-/** Код → ойдан шығарылған атау. Нақты Ақтау нысандарының атауымен сәйкес келетіндер алынып тасталады. */
+/** Код → ойдан шығарылған атау (мектептен басқа түрлер). Нақты Ақтау нысандарының атауымен сәйкес келетіндер алынып тасталады. */
 function fictionalNames(real: FacilityJson[]) {
   const realFull = real.map((f) => normalize(f.name));
   const realBrands = real.map((f) => normalize(f.name.split(",")[0])).filter((b) => b.length >= 3);
@@ -66,17 +67,8 @@ function fictionalNames(real: FacilityJson[]) {
     const w = normalize(word);
     return realFull.some((r) => r.includes(w)) || realBrands.some((b) => w.includes(b));
   };
-  const realSchoolNumbers = new Set(
-    real.filter((f) => f.kind === "SCHOOL").flatMap((f) => Array.from(f.name.matchAll(/№\s*(\d+)/g), (m) => Number(m[1]))),
-  );
 
   const names = new Map<string, string>();
-  let number = FIRST_SCHOOL_NUMBER;
-  CODES.SCHOOL.forEach((code, i) => {
-    while (realSchoolNumbers.has(number)) number++;
-    const type = i % 8 === 3 ? "мектеп-гимназия" : i % 12 === 7 ? "мектеп-лицей" : "жалпы білім беретін мектеп";
-    names.set(code, `№${number++} ${type}`);
-  });
   for (const kind of Object.keys(NAME_POOL) as (keyof typeof NAME_POOL)[]) {
     const free = NAME_POOL[kind].filter((w) => !taken(w));
     if (free.length < CODES[kind].length) throw new Error(`${kind}: бос атау жетпеді (${free.length})`);
@@ -85,10 +77,29 @@ function fictionalNames(real: FacilityJson[]) {
   return names;
 }
 
-// Басты назар — мектеп асханалары: 40 мектеп, 10 балабақша. Мейрамхана, кафе, қоғамдық асхана —
-// қосымша (барлығы 10), жүйенің оларға да қолданылатынын көрсету үшін.
+/** Мемлекеттік жалпы білім беретін мектеп: 2GIS-те нөмірі бар (кешкі, арнайы және облыстағы ауыл мектептері кірмейді — олардың нөмірі қайталанады). */
+const isStateSchool = (f: FacilityJson) => f.kind === "SCHOOL" && /№\s*\d+/.test(f.name) && !/Вечерн|Специальн|\sс\.\s/.test(f.name);
+
+/** 2GIS атауы → шифрланған атау, түрі сақталады: «Школа-гимназия №19» → «№AI мектеп-гимназия». */
+function cipherSchoolName(realName: string) {
+  const n = Number(realName.match(/№\s*(\d+)/)![1]);
+  const type = /школа-гимназия/i.test(realName)
+    ? "мектеп-гимназия"
+    : /гимназия/i.test(realName)
+      ? "гимназия"
+      : /школа-лицей/i.test(realName)
+        ? "мектеп-лицей"
+        : /лицей/i.test(realName)
+          ? "лицей"
+          : "жалпы білім беретін мектеп";
+  return `№${schoolCipher(n)} ${type}`;
+}
+const STATE_SCHOOL_COUNT = 34;
+
+// Басты назар — мектеп асханалары: Ақтаудың 34 мемлекеттік мектебі, 10 балабақша. Мейрамхана, кафе,
+// қоғамдық асхана — қосымша (барлығы 10), жүйенің оларға да қолданылатынын көрсету үшін.
 const CODES: Record<FacilityKind, string[]> = {
-  SCHOOL: Array.from({ length: 40 }, (_, i) => `А-${String(i + 1).padStart(2, "0")}`),
+  SCHOOL: Array.from({ length: STATE_SCHOOL_COUNT }, (_, i) => `А-${String(i + 1).padStart(2, "0")}`),
   KINDERGARTEN: [...Array.from({ length: 9 }, (_, i) => `Б-0${i + 1}`), "Б-11"],
   RESTAURANT: ["М-01", "М-02", "М-03", "М-07"],
   CAFE: ["К-06", "К-09", "К-14"],
@@ -159,7 +170,7 @@ async function insertChunked<T>(label: string, rows: T[], insert: (chunk: T[]) =
 async function clearAll() {
   await prisma.$executeRawUnsafe(
     `TRUNCATE "Prescription", "Inspection", "Alert", "RiskSnapshot", "ParentFeedback", "SymptomReport", "KitchenLog",
-      "MenuItem", "Delivery", "Batch", "Supplier", "User", "School", "District" CASCADE`,
+      "MenuItem", "Delivery", "Batch", "Supplier", "CaptureToken", "User", "School", "District" CASCADE`,
   );
 }
 
@@ -172,18 +183,29 @@ function shuffled<T>(items: T[]) {
   return copy;
 }
 
+type Located = FacilityJson & { mkr: string };
+
+/** 2GIS-те мекенжайы жоқ нысанға (мысалы, №31 мектеп) шағын аудан ең жақын белгілі нысаннан алынады. */
+function nearestMkr(f: FacilityJson, known: Located[]) {
+  const d2 = (k: Located) => (k.lat - f.lat) ** 2 + ((k.lng - f.lng) * Math.cos((f.lat * Math.PI) / 180)) ** 2;
+  return known.reduce((best, k) => (d2(k) < d2(best) ? k : best)).mkr;
+}
+
 /** Әр түрден нысандарды таңдайды: алдымен сценарий нысандары, қалғаны әр шағын аудан кезекпен. */
 function pickEstablishments(all: FacilityJson[]) {
-  const picked: { code: string; kind: FacilityKind; mkr: string; lat: number; lng: number; scenario: Scenario; training: boolean }[] = [];
+  const picked: { code: string; kind: FacilityKind; name?: string; mkr: string; lat: number; lng: number; scenario: Scenario; training: boolean }[] = [];
+  const located: Located[] = all.map((f) => ({ ...f, mkr: microdistrict(f.address)?.replace(/-мкр$/, "") ?? "" }));
+  const numbered = located.filter((f) => /^\d/.test(f.mkr));
   for (const kind of Object.keys(CODES) as FacilityKind[]) {
-    type Candidate = FacilityJson & { mkr: string };
-    const pool: Candidate[] = all
-      .map((f) => ({ ...f, mkr: microdistrict(f.address)?.replace(/-мкр$/, "") ?? "" }))
-      .filter((f) => f.kind === kind && /^\d/.test(f.mkr))
-      .sort((a, b) => a.dgisId.localeCompare(b.dgisId));
+    // Мектептер — барлық мемлекеттік мектеп (Шыгыс-1, промзона, Умирзак та), басқалары — нөмірлі шағын аудандардан.
+    const pool: Located[] = (
+      kind === "SCHOOL"
+        ? located.filter(isStateSchool).map((f) => ({ ...f, mkr: f.mkr || nearestMkr(f, numbered) }))
+        : located.filter((f) => f.kind === kind && /^\d/.test(f.mkr))
+    ).sort((a, b) => a.dgisId.localeCompare(b.dgisId));
     const used = new Set<string>();
     const codes = CODES[kind];
-    const assigned = new Map<string, Candidate>();
+    const assigned = new Map<string, Located>();
 
     for (const code of codes.filter((c) => FIXED[c])) {
       const want = FIXED[code].mkr;
@@ -209,6 +231,7 @@ function pickEstablishments(all: FacilityJson[]) {
       picked.push({
         code,
         kind,
+        name: kind === "SCHOOL" ? cipherSchoolName(f.name) : undefined,
         mkr: f.mkr,
         lat: f.lat,
         lng: f.lng,
@@ -230,7 +253,7 @@ async function main() {
   const names = fictionalNames(real);
   const facilities = pickEstablishments(real).map((f) => ({
     ...f,
-    name: names.get(f.code)!,
+    name: f.name ?? names.get(f.code)!,
     id: randomUUID(),
   }));
   const byCode = new Map(facilities.map((f) => [f.code, f]));
@@ -239,9 +262,12 @@ async function main() {
   console.log("Тазалау...");
   await clearAll();
 
-  const mkrs = Array.from(new Set(facilities.map((f) => f.mkr))).sort((a, b) => parseInt(a) - parseInt(b));
+  // "14" → "14-мкр"; нөмірсіз аймақтар ("Шыгыс-1", "Промзона 5", "Умирзак") сол қалпында.
+  const place = (mkr: string) => (/^\d/.test(mkr) ? `${mkr}-мкр` : mkr);
+  const order = (m: string) => parseInt(m) || 1000;
+  const mkrs = Array.from(new Set(facilities.map((f) => f.mkr))).sort((a, b) => order(a) - order(b) || a.localeCompare(b));
   const districtIds = new Map(mkrs.map((m) => [m, randomUUID()]));
-  await prisma.district.createMany({ data: mkrs.map((m) => ({ id: districtIds.get(m)!, name: `${m}-мкр` })) });
+  await prisma.district.createMany({ data: mkrs.map((m) => ({ id: districtIds.get(m)!, name: place(m) })) });
 
   const inspection = (sc: Scenario): { at: Date | null; result: string } => {
     switch (sc) {
@@ -268,7 +294,7 @@ async function main() {
       code: f.code,
       kind: f.kind,
       name: f.name,
-      address: `Ақтау, ${f.mkr}-мкр`,
+      address: `Ақтау, ${place(f.mkr)}`,
       lat: f.lat,
       lng: f.lng,
       studentsCount: randInt(...CAPACITY[f.kind]),

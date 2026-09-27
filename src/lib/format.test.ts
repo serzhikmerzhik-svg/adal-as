@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { microdistrict, placeLabel, shortName } from "./format";
+import { microdistrict, placeLabel, schoolCipher, shortName } from "./format";
 
 test("shortName: нөмірлі мектеп, гимназия, лицей", () => {
   assert.equal(shortName("Общеобразовательная средняя школа №17", "SCHOOL"), "№17 мектеп");
@@ -28,7 +28,24 @@ test("microdistrict: 2GIS мекенжай пішімдері", () => {
   assert.equal(microdistrict("микрорайон 29А, 5/6"), "29А-мкр");
   assert.equal(microdistrict("микрорайон 18А, 9"), "18А-мкр");
   assert.equal(microdistrict("жилмассив Жалын, 374"), "Жалын");
+  assert.equal(microdistrict("микрорайон Шыгыс-1, 149/1"), "Шыгыс-1");
+  assert.equal(microdistrict("промышленная зона 5, 51/2"), "Промзона 5");
+  assert.equal(microdistrict("село Умирзак, 4"), "Умирзак");
   assert.equal(microdistrict("улица Уәлиханов, 8/8"), null);
+});
+
+test("schoolCipher: цифр → әріп (1→A … 9→I, 0→J)", () => {
+  assert.equal(schoolCipher(1), "A");
+  assert.equal(schoolCipher(2), "B");
+  assert.equal(schoolCipher(14), "AD");
+  assert.equal(schoolCipher(10), "AJ");
+  assert.equal(schoolCipher(35), "CE");
+});
+
+test("shortName: шифрланған мектеп атауы үш тілде", () => {
+  assert.equal(shortName("№AD жалпы білім беретін мектеп", "SCHOOL"), "№AD мектеп");
+  assert.equal(shortName("№AC гимназия", "SCHOOL", "ru"), "Гимназия №AC");
+  assert.equal(shortName("№G мектеп-лицей", "SCHOOL", "en"), "Lyceum No. G");
 });
 
 test("placeLabel: аудан + шағын аудан", () => {

@@ -5,9 +5,18 @@ import { DEFAULT_LOCALE, type Locale } from "@/i18n/config";
 import { getDict } from "@/i18n/dict";
 import { latin } from "@/i18n/translit";
 
+/**
+ * Мектеп нөмірінің шифры: әр цифр әріпке ауысады (1→A … 9→I, 0→J), мысалы №14 → "AD", №10 → "AJ".
+ * Картадағы мектептер 2GIS-тегі нақты мектептер, бірақ демо-сценарийдегі бұзушылықтар ойдан шығарылған,
+ * сондықтан нөмір ашық жазылмайды.
+ */
+export function schoolCipher(n: number): string {
+  return String(n).replace(/\d/g, (d) => "JABCDEFGHI"[Number(d)]);
+}
+
 export function shortName(name: string, kind: string, locale: Locale = DEFAULT_LOCALE): string {
   const f = getDict(locale).format;
-  const num = name.match(/№\s*(\d+)/)?.[1];
+  const num = name.match(/№\s*(\d+|[A-J]+)/)?.[1];
   const base = name.split(",")[0].trim();
   const text = (s: string) => (locale === "en" ? latin(s) : s);
 
@@ -44,14 +53,20 @@ export function districtShort(district: string, locale: Locale = DEFAULT_LOCALE)
   return locale === "en" ? latin(short) : short;
 }
 
-/** "13-й микрорайон, 51" → "13-мкр"; "микрорайон 29А, 5/6" → "29А-мкр"; "жилмассив Жалын, 374" → "Жалын". */
+/**
+ * "13-й микрорайон, 51" → "13-мкр"; "микрорайон 29А, 5/6" → "29А-мкр"; "жилмассив Жалын, 374" → "Жалын";
+ * "микрорайон Шыгыс-1, 149/1" → "Шыгыс-1"; "промышленная зона 5, 51/2" → "Промзона 5"; "село Умирзак, 4" → "Умирзак".
+ */
 export function microdistrict(address: string): string | null {
   // JS-тегі \b тек латын әріптерін таниды, сондықтан кириллица әріптен кейін lookahead қолданылады.
   const numbered =
     address.match(/(\d+[А-Яа-яA-Za-z]?)-?й?\s+микрорайон/) ?? address.match(/микрорайон\s+(\d+[А-Яа-яA-Za-z]?)(?=[\s,]|$)/);
   if (numbered) return `${numbered[1]}-мкр`;
-  const massiv = address.match(/жилмассив\s+([^,]+)/);
-  if (massiv) return massiv[1].trim();
+  const named =
+    address.match(/жилмассив\s+([^,]+)/) ?? address.match(/микрорайон\s+([^\d\s,][^,]*)/) ?? address.match(/(?:^|\s)село\s+([^,]+)/);
+  if (named) return named[1].trim();
+  const zone = address.match(/промышленная зона\s+(\d+)/);
+  if (zone) return `Промзона ${zone[1]}`;
   return null;
 }
 
