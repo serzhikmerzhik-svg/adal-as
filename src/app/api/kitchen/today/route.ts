@@ -17,7 +17,7 @@ export async function GET() {
   if (!school) return NextResponse.json({ error: t.api.notFound }, { status: 404 });
   const day = hasPlan(school.kind) ? planDay() : null;
 
-  const [menuItems, prescriptions, suppliers, plan, devices, staff, batches] = await Promise.all([
+  const [menuItems, prescriptions, suppliers, plan, devices, staff, batches, fridgeLogs] = await Promise.all([
     prisma.menuItem.findMany({
       where: { schoolId, date: todayDate() },
       include: {
@@ -58,7 +58,14 @@ export async function GET() {
       orderBy: { code: "asc" },
       select: { id: true, code: true, product: true, supplier: { select: { name: true, blocked: true } } },
     }),
+    // Тоңазытқыш температурасы күніне бір рет енгізіледі (тағамға байланбайды).
+    prisma.kitchenLog.findMany({
+      where: { schoolId, type: "FRIDGE_TEMP", createdAt: { gte: start } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, valueC: true, isViolation: true, source: true, createdAt: true },
+    }),
   ]);
 
-  return NextResponse.json({ school, planDay: day, plan, menuItems, prescriptions, suppliers, devices, staff, batches });
+  return NextResponse.json({ school, planDay: day, plan, menuItems, prescriptions, suppliers, devices, staff, batches, fridgeLogs });
 }

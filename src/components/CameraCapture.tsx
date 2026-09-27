@@ -19,6 +19,8 @@ type TokenInfo = {
 };
 type Phase = "init" | "permission" | "locating" | "starting" | "live" | "blocked";
 export type CaptureMeta = { captureToken: string; qrCode?: string };
+/** PORTION — порция (QR-тұғыр міндетті), PROOF — нұсқаманың дәлелі, STAFF — қызметкер формасы, WASTE — қайтарылған табақтар. */
+export type CapturePurpose = "PORTION" | "PROOF" | "STAFF" | "WASTE";
 
 /** Браузер камераға бұрын рұқсат берген бе (Permissions API). Берген болса, түсіндірме экраны көрсетілмейді. */
 async function cameraAlreadyAllowed() {
@@ -65,7 +67,7 @@ export function CameraCapture({
   onClose,
 }: {
   title: string;
-  purpose: "PORTION" | "PROOF";
+  purpose: CapturePurpose;
   targetId: string;
   onCapture: (dataUrl: string, meta: CaptureMeta) => Promise<void> | void;
   onClose: () => void;
@@ -83,6 +85,7 @@ export function CameraCapture({
   const [now, setNow] = useState(() => Date.now());
   const [qrSeenAt, setQrSeenAt] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [facing, setFacing] = useState<"environment" | "user">("environment");
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -152,7 +155,7 @@ export function CameraCapture({
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
         if (cancelled) {
@@ -174,7 +177,7 @@ export function CameraCapture({
     return () => {
       cancelled = true;
     };
-  }, [phase, t.camera]);
+  }, [phase, t.camera, facing]);
 
   useEffect(() => stopCamera, [stopCamera]);
 
@@ -332,7 +335,7 @@ export function CameraCapture({
               )}
               {phase === "live" ? (
                 <p className="absolute inset-x-0 top-14 mx-auto w-fit max-w-[85%] rounded-full bg-black/55 px-3 py-1 text-center text-sm font-medium text-white">
-                  {purpose === "PORTION" ? c.fitHint : c.fitHintProof}
+                  {{ PORTION: c.fitHint, PROOF: c.fitHintProof, STAFF: c.fitHintStaff, WASTE: c.fitHintWaste }[purpose]}
                 </p>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-page/70 p-6 text-center">
@@ -353,6 +356,24 @@ export function CameraCapture({
                     </button>
                   )}
                 </div>
+              )}
+              {phase === "live" && (
+                <button
+                  type="button"
+                  aria-label={t.camera.switchCamera}
+                  title={t.camera.switchCamera}
+                  onClick={() => {
+                    stopCamera();
+                    setFacing((f) => (f === "environment" ? "user" : "environment"));
+                    setPhase("starting");
+                  }}
+                  className="absolute bottom-6 left-6 inline-flex h-11 w-11 items-center justify-center rounded-full bg-page/80 text-ink hover:bg-page"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                    <path d="M4 8h3l1.5-2h7L17 8h3v11H4Z" />
+                    <path d="M9.5 12.5a2.5 2.5 0 0 1 4.4-1.6M14.5 13.5a2.5 2.5 0 0 1-4.4 1.6M14 9.8v1.4h-1.4M10 16.2v-1.4h1.4" />
+                  </svg>
+                </button>
               )}
               {info?.qrRequired && (
                 <span

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/db/prisma";
@@ -7,6 +6,7 @@ import { qrPayload } from "@/lib/capture";
 import { shortName } from "@/lib/format";
 import { AppHeader } from "@/components/AppHeader";
 import { PrintButton } from "@/components/PrintButton";
+import { KitchenTabs } from "@/components/kitchen/KitchenTabs";
 import { getLocale, getT } from "@/i18n/server";
 
 // Тағам беру сөресіне қойылатын QR-тұғыр: порция фотосы тек осы код кадрда тұрғанда түсіріледі.
@@ -28,9 +28,7 @@ export default async function KitchenQrPage() {
         <AppHeader subtitle={`${t.kitchen.subtitle} · ${t.capture.qrTitle}`} roleLabel={t.roles.kitchen} />
       </div>
       <div className="mx-auto max-w-md space-y-4 p-4">
-        <Link href="/kitchen" className="inline-block text-sm text-ink-2 hover:text-ink print:hidden">
-          ← {t.common.back}
-        </Link>
+        <KitchenTabs />
         <section className="rounded-2xl bg-white p-6 text-center text-black shadow-lg print:shadow-none">
           <p className="text-sm font-semibold uppercase tracking-widest text-neutral-500">Adal As · {t.capture.qrTitle}</p>
           <p className="mt-1 text-5xl font-extrabold tracking-tight">{code}</p>

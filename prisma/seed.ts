@@ -559,12 +559,12 @@ async function main() {
   await prisma.staff.createMany({ data: staffRows });
   await prisma.staffCheck.createMany({ data: checkRows });
 
-  // №AD асханасының термометр-щупы: кілт .env ішіндегі DEMO_DEVICE_KEY (құрылғының бағдарламасына да сол жазылады).
+  // №AD асханасының тағам термометрі (датчик): кілт .env ішіндегі DEMO_DEVICE_KEY (құрылғының бағдарламасына да сол жазылады).
   // Кілт тұрақты болғандықтан, seed қайта жүргізілсе де құрылғы жұмысын жалғастырады.
   const devices: Prisma.DeviceCreateManyInput[] = [];
   const demoKey = process.env.DEMO_DEVICE_KEY?.trim();
   if (demoKey) {
-    devices.push({ schoolId: byCode.get("А-14")!.id, kind: "PROBE", label: "Термометр-щуп", keyHash: hashDeviceKey(demoKey), keyHint: keyHint(demoKey) });
+    devices.push({ schoolId: byCode.get("А-14")!.id, kind: "PROBE", label: "Тағам термометрі", keyHash: hashDeviceKey(demoKey), keyHint: keyHint(demoKey) });
   } else {
     console.log("  DEMO_DEVICE_KEY жоқ: №AD термометрін /kitchen бетінен қосыңыз");
   }
