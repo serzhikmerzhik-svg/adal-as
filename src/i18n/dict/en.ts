@@ -553,15 +553,6 @@ export const en: Dict = {
     qrLink: "Print the QR stand",
   },
   devices: {
-    guideTitle: "How to build the device",
-    guideParts: "You need: an ESP32 board, a waterproof DS18B20 sensor (steel probe on a cable), a 4.7 kΩ resistor, wires and a USB cable.",
-    guideSteps: [
-      "Wire the sensor: red → 3V3, black → GND, yellow (DATA) → GPIO4; put the 4.7 kΩ resistor between DATA and 3V3.",
-      "In Arduino IDE install the esp32 board package and the OneWire and DallasTemperature libraries.",
-      "In the hardware/esp32-thermometer sketch set the Wi‑Fi, the site address and the device key, then flash the board.",
-      "In the log, tap “Measure with thermometer” on a dish — the board LED starts blinking. Put the sensor into the dish and press BOOT: the temperature lands in the log by itself.",
-    ],
-    guideFull: "Full guide and firmware (GitHub)",
     listTitle: "Connected devices",
     title: "Devices",
     hint: "The food thermometer and fridge sensor send readings to the site on their own (ESP32 + DS18B20). Without a device, temperatures are entered by hand.",
@@ -588,7 +579,6 @@ export const en: Dict = {
     waiting: (s) => `Put the sensor into the dish and press the button on the device… ${s} s`,
     cancel: "Cancel",
     fromDevice: "from device",
-    docs: "How to build the device",
   },
   norms: {
     category: "Category",
